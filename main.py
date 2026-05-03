@@ -4719,12 +4719,26 @@ dz.addEventListener('dragleave', () => {{ dz.style.borderColor='rgba(245,158,11,
 dz.addEventListener('drop', e => {{
   e.preventDefault();
   dz.style.borderColor='rgba(245,158,11,.35)'; dz.style.background='rgba(245,158,11,.03)';
-  const dt = new DataTransfer();
-  if (e.dataTransfer.files.length > 0) {{
-    dt.items.add(e.dataTransfer.files[0]);
-    fileInput.files = dt.files;
-    fileInput.dispatchEvent(new Event('change'));
-  }}
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  document.getElementById('fileName').textContent = '📎 ' + file.name;
+  submitBtn.disabled = false;
+  submitBtn.innerHTML = '<i class="bi bi-cpu-fill me-1"></i>Running AI Intake...';
+  dz.innerHTML = '<i class="bi bi-hourglass-split" style="font-size:2rem;color:#f59e0b;opacity:.7"></i><div style="color:#f59e0b;margin-top:.6rem;font-size:.85rem">Processing ' + file.name + '...</div>';
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('mode', document.getElementById('uploadMode').value || 'ai');
+  fetch('/upload', {{method: 'POST', body: fd}})
+    .then(r => r.text())
+    .then(() => {{
+      dz.innerHTML = '<i class="bi bi-check-circle-fill" style="font-size:2rem;color:#22c55e"></i><div style="color:#22c55e;margin-top:.6rem;font-weight:600">✅ ' + file.name + ' processed!</div><div style="color:#94a3b8;font-size:.8rem;margin-top:.3rem">Drop another file or <a href="/documents" style="color:#f59e0b">view documents</a></div>';
+      submitBtn.innerHTML = '<i class="bi bi-check-fill me-1"></i>Done — Drop Another File';
+      submitBtn.disabled = true;
+    }})
+    .catch(() => {{
+      dz.innerHTML = '<i class="bi bi-exclamation-triangle-fill" style="font-size:2rem;color:#ef4444"></i><div style="color:#ef4444;margin-top:.6rem">Upload failed — try clicking to select file</div>';
+      submitBtn.disabled = true;
+    }});
 }});
 
 function switchToExcel() {{
