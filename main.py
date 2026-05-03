@@ -4607,12 +4607,29 @@ const fileInput = document.getElementById('fileInput');
 const submitBtn = document.getElementById('submitBtn');
 const fileNameEl = document.getElementById('fileName');
 
-fileInput.addEventListener('change', function() {{
-  if (this.files.length > 0) {{
-    fileNameEl.textContent = '• ' + this.files[0].name + ' (' + (this.files[0].size/1024).toFixed(0) + ' KB)';
-    submitBtn.disabled = false;
-  }}
-}});
+fileInput.addEventListener('change', function() {
+  if (this.files.length > 0) {
+    const file = this.files[0];
+    fileNameEl.textContent = '• ' + file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
+    submitBtn.innerHTML = '<i class="bi bi-cpu-fill me-1"></i>Processing...';
+    submitBtn.disabled = true;
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('mode', document.getElementById('uploadMode').value || 'ai');
+    fetch('/upload', {method: 'POST', body: fd})
+      .then(r => r.text())
+      .then(() => {
+        fileNameEl.innerHTML = '✅ <strong>' + file.name + '</strong> processed! <a href="/documents" style="color:#f59e0b">View in documents</a>';
+        submitBtn.innerHTML = '<i class="bi bi-cpu-fill me-1"></i>Run AI Intake';
+        submitBtn.disabled = true;
+        fileInput.value = '';
+      })
+      .catch(() => {
+        fileNameEl.textContent = '❌ Upload failed — try again';
+        submitBtn.disabled = false;
+      });
+  }
+});
 
 const dz = document.getElementById('dropZone');
 dz.addEventListener('dragover', e => {{ e.preventDefault(); dz.style.borderColor='#f59e0b'; dz.style.background='rgba(245,158,11,.06)'; }});
