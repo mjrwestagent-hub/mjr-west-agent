@@ -4404,8 +4404,18 @@ def upload_page():
                     xls_result = process_excel_file(fpath)
                     flash(f"Excel import: {xls_result['imported']} properties added, {xls_result['skipped']} skipped.", "success")
                 else:
-                    ai_result = process_file_universal(fpath, fname)
-                    flash(f"AI intake complete — {ai_result.get('ai_classification','?')} detected.", "success")
+                    import threading
+                    def _bg_process(fp, fn):
+                        try:
+                            process_file_universal(fp, fn)
+                        except Exception:
+                            log.exception("background upload error")
+                        finally:
+                            try: os.remove(fp)
+                            except OSError: pass
+                    t = threading.Thread(target=_bg_process, args=(fpath, fname), daemon=True)
+                    t.start()
+                    flash("⏳ File received — processing in background. Check Documents shortly.", "success")
             except Exception as e:
                 log.exception("upload error")
                 flash(f"Processing error: {e}", "error")
