@@ -3591,42 +3591,11 @@ def properties_page():
 <div class="ph">
   <div><h4>Properties</h4><p>{len(props)} listings</p></div>
   <div class="d-flex gap-2">
-   <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('propDropZone').classList.toggle('d-none')"><i class="bi bi-upload me-1"></i>Import Excel</button>
+    <a href="/upload" class="btn btn-sm btn-outline-secondary"><i class="bi bi-upload me-1"></i>Import Excel</a>
     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addPropertyModal">
       <i class="bi bi-plus me-1"></i>Add Property</button>
   </div>
 </div>
-<div id="propDropZone" class="d-none mb-3" style="border:2px dashed rgba(245,158,11,.6);border-radius:12px;padding:2rem;text-align:center;background:rgba(245,158,11,.04);cursor:pointer;transition:all .2s">
-  <i class="bi bi-file-earmark-spreadsheet" style="font-size:2rem;color:#f59e0b"></i>
-  <div style="color:#f59e0b;font-weight:600;margin-top:.5rem">Drop your Excel file here</div>
-  <div style="color:#64748b;font-size:.82rem;margin-top:.25rem">Asset register, vacancy schedule — any .xlsx file</div>
-  <input type="file" id="propFileInput" accept=".xlsx,.xls,.csv" style="display:none">
-  <div id="propUploadStatus" style="margin-top:.75rem;font-size:.85rem"></div>
-</div>
-<script>
-(function(){{
-  var dz = document.getElementById('propDropZone');
-  var fi = document.getElementById('propFileInput');
-  var st = document.getElementById('propUploadStatus');
-  function uploadFile(file){{
-    st.innerHTML = '<span style="color:#f59e0b">⏳ Uploading '+file.name+'...</span>';
-    var fd = new FormData();
-    fd.append('file', file);
-    fd.append('mode', 'excel');
-    fetch('/upload', {{method:'POST', body:fd}})
-      .then(r => r.text()).then(html => {{
-        st.innerHTML = '<span style="color:#22c55e">✅ Imported! <a href="/properties" style="color:#f59e0b">Refresh to see results</a></span>';
-      }}).catch(() => {{
-        st.innerHTML = '<span style="color:#ef4444">❌ Upload failed — try the <a href="/upload" style="color:#f59e0b">upload page</a></span>';
-      }});
-  }}
-  dz.addEventListener('dragover', e => {{ e.preventDefault(); dz.style.borderColor='#f59e0b'; dz.style.background='rgba(245,158,11,.1)'; }});
-  dz.addEventListener('dragleave', () => {{ dz.style.borderColor='rgba(245,158,11,.6)'; dz.style.background='rgba(245,158,11,.04)'; }});
-  dz.addEventListener('drop', e => {{ e.preventDefault(); dz.style.borderColor='rgba(245,158,11,.6)'; dz.style.background='rgba(245,158,11,.04)'; if(e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); }});
-  dz.addEventListener('click', () => fi.click());
-  fi.addEventListener('change', () => {{ if(fi.files[0]) uploadFile(fi.files[0]); }});
-}})();
-</script>
 <div class="card mb-3">
   <div class="card-body py-2">
     <form class="row g-2 align-items-center" method="GET" action="/properties">
@@ -3793,43 +3762,9 @@ def contacts_page():
     content = f"""
 <div class="ph">
   <div><h4>Contacts</h4><p>{len(contacts)} records</p></div>
- <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('dealDropZone').classList.toggle('d-none')"><i class="bi bi-upload me-1"></i>Import Excel</button>
-    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addDealModal">
-      <i class="bi bi-plus me-1"></i>Add Deal</button>
-  </div>
+  <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
+    <i class="bi bi-plus me-1"></i>Add Contact</button>
 </div>
-<div id="dealDropZone" class="d-none mb-3" style="border:2px dashed rgba(245,158,11,.6);border-radius:12px;padding:2rem;text-align:center;background:rgba(245,158,11,.04);cursor:pointer;transition:all .2s">
-  <i class="bi bi-file-earmark-spreadsheet" style="font-size:2rem;color:#f59e0b"></i>
-  <div style="color:#f59e0b;font-weight:600;margin-top:.5rem">Drop your Excel file here</div>
-  <div style="color:#64748b;font-size:.82rem;margin-top:.25rem">Deal tracker, transaction history — any .xlsx file</div>
-  <input type="file" id="dealFileInput" accept=".xlsx,.xls,.csv" style="display:none">
-  <div id="dealUploadStatus" style="margin-top:.75rem;font-size:.85rem"></div>
-</div>
-<script>
-(function(){
-  var dz = document.getElementById('dealDropZone');
-  var fi = document.getElementById('dealFileInput');
-  var st = document.getElementById('dealUploadStatus');
-  function uploadFile(file){
-    st.innerHTML = '<span style="color:#f59e0b">⏳ Uploading '+file.name+'...</span>';
-    var fd = new FormData();
-    fd.append('file', file);
-    fd.append('mode', 'excel');
-    fetch('/upload', {method:'POST', body:fd})
-      .then(r => r.text()).then(html => {
-        st.innerHTML = '<span style="color:#22c55e">✅ Imported! <a href="/deals" style="color:#f59e0b">Refresh to see results</a></span>';
-      }).catch(() => {
-        st.innerHTML = '<span style="color:#ef4444">❌ Upload failed — try the <a href="/upload" style="color:#f59e0b">upload page</a></span>';
-      });
-  }
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='#f59e0b'; dz.style.background='rgba(245,158,11,.1)'; });
-  dz.addEventListener('dragleave', () => { dz.style.borderColor='rgba(245,158,11,.6)'; dz.style.background='rgba(245,158,11,.04)'; });
-  dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor='rgba(245,158,11,.6)'; dz.style.background='rgba(245,158,11,.04)'; if(e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
-  dz.addEventListener('click', () => fi.click());
-  fi.addEventListener('change', () => { if(fi.files[0]) uploadFile(fi.files[0]); });
-})();
-</script>
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -3914,43 +3849,9 @@ def inquiries_page():
     <h4><i class="bi bi-lightning-fill me-2" style="color:#f59e0b"></i>Lead Pipeline</h4>
     <p>{len(inquiries)} total &bull; <span style="color:#f97316;font-weight:700">{fire_count} hot leads</span></p>
   </div>
-<div class="d-flex gap-2">
-    <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('leadDropZone').classList.toggle('d-none')"><i class="bi bi-upload me-1"></i>Import Excel</button>
-    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addInqModal">
-      <i class="bi bi-plus me-1"></i>Add Lead</button>
-  </div>
+  <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addInqModal">
+    <i class="bi bi-plus me-1"></i>Add Lead</button>
 </div>
-<div id="leadDropZone" class="d-none mb-3" style="border:2px dashed rgba(245,158,11,.6);border-radius:12px;padding:2rem;text-align:center;background:rgba(245,158,11,.04);cursor:pointer;transition:all .2s">
-  <i class="bi bi-file-earmark-spreadsheet" style="font-size:2rem;color:#f59e0b"></i>
-  <div style="color:#f59e0b;font-weight:600;margin-top:.5rem">Drop your Excel file here</div>
-  <div style="color:#64748b;font-size:.82rem;margin-top:.25rem">Requirements register, enquiry list — any .xlsx file</div>
-  <input type="file" id="leadFileInput" accept=".xlsx,.xls,.csv" style="display:none">
-  <div id="leadUploadStatus" style="margin-top:.75rem;font-size:.85rem"></div>
-</div>
-<script>
-(function(){
-  var dz = document.getElementById('leadDropZone');
-  var fi = document.getElementById('leadFileInput');
-  var st = document.getElementById('leadUploadStatus');
-  function uploadFile(file){
-    st.innerHTML = '<span style="color:#f59e0b">⏳ Uploading '+file.name+'...</span>';
-    var fd = new FormData();
-    fd.append('file', file);
-    fd.append('mode', 'excel');
-    fetch('/upload', {method:'POST', body:fd})
-      .then(r => r.text()).then(html => {
-        st.innerHTML = '<span style="color:#22c55e">✅ Imported! <a href="/inquiries" style="color:#f59e0b">Refresh to see results</a></span>';
-      }).catch(() => {
-        st.innerHTML = '<span style="color:#ef4444">❌ Upload failed — try the <a href="/upload" style="color:#f59e0b">upload page</a></span>';
-      });
-  }
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='#f59e0b'; dz.style.background='rgba(245,158,11,.1)'; });
-  dz.addEventListener('dragleave', () => { dz.style.borderColor='rgba(245,158,11,.6)'; dz.style.background='rgba(245,158,11,.04)'; });
-  dz.addEventListener('drop', e => { e.preventDefault(); dz.style.borderColor='rgba(245,158,11,.6)'; dz.style.background='rgba(245,158,11,.04)'; if(e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
-  dz.addEventListener('click', () => fi.click());
-  fi.addEventListener('change', () => { if(fi.files[0]) uploadFile(fi.files[0]); });
-})();
-</script>
 <div class="card">
   <div class="card-body p-0">
     <div class="table-responsive">
