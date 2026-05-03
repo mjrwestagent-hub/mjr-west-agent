@@ -4609,8 +4609,22 @@ const fileNameEl = document.getElementById('fileName');
 
 fileInput.addEventListener('change', function() {{
   if (this.files.length > 0) {{
-    fileNameEl.textContent = '• ' + this.files[0].name + ' (' + (this.files[0].size/1024).toFixed(0) + ' KB)';
-    submitBtn.disabled = false;
+    const file = this.files[0];
+    fileNameEl.textContent = '⏳ Processing ' + file.name + '...';
+    submitBtn.disabled = true;
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('mode', document.getElementById('uploadMode').value || 'ai');
+    fetch('/upload', {{method:'POST', body:fd}})
+      .then(r => r.text())
+      .then(() => {{
+        fileNameEl.innerHTML = '✅ <strong>' + file.name + '</strong> done! <a href="/documents" style="color:#f59e0b">View documents</a>';
+        fileInput.value = '';
+      }})
+      .catch(() => {{
+        fileNameEl.textContent = '❌ Failed - try again';
+        submitBtn.disabled = false;
+      }});
   }}
 }});
 
