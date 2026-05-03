@@ -1,12 +1,12 @@
-"""
+﻿"""
 MJR West Industrial Property Intelligence Agent
-Single-file Flask application — main.py
+Single-file Flask application â€” main.py
 
 pip install flask supabase twilio apscheduler openpyxl python-dotenv \
             openai pypdf python-docx Pillow
 """
 
-# ── Imports ───────────────────────────────────────────────────────────────────
+# â”€â”€ Imports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import os, json, logging, imaplib, email, re, io, smtplib, threading, base64, mimetypes
 from datetime import datetime, timedelta, timezone
 from email.header import decode_header
@@ -28,11 +28,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── Logging ───────────────────────────────────────────────────────────────────
+# â”€â”€ Logging â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 SECRET_KEY          = os.getenv("SECRET_KEY", "change-me-in-production")
 ADMIN_USER          = os.getenv("ADMIN_USER", "admin")
 ADMIN_PASS_HASH     = generate_password_hash(os.getenv("ADMIN_PASSWORD", "admin123"))
@@ -64,7 +64,7 @@ BRIEFING_HOUR       = int(os.getenv("BRIEFING_HOUR", 8))
 BRIEFING_MINUTE     = int(os.getenv("BRIEFING_MINUTE", 0))
 TIMEZONE            = os.getenv("TIMEZONE", "Australia/Melbourne")
 
-# ── OpenAI ────────────────────────────────────────────────────────────────────
+# â”€â”€ OpenAI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 OPENAI_API_KEY      = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL        = os.getenv("OPENAI_MODEL", "gpt-4o")
 EMBEDDING_MODEL     = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
@@ -72,7 +72,7 @@ EMBEDDING_DIMS      = 1536
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ── Flask app ─────────────────────────────────────────────────────────────────
+# â”€â”€ Flask app â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
@@ -86,7 +86,7 @@ def get_base_url() -> str:
         return APP_URL
     return request.url_root.rstrip("/")
 
-# ── Supabase ──────────────────────────────────────────────────────────────────
+# â”€â”€ Supabase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _sb = None
 def get_sb():
     global _sb
@@ -153,7 +153,7 @@ def init_schema():
     """Create tables if they don't exist via Supabase RPC (run once)."""
     sb = get_sb()
     if sb is None:
-        log.warning("Supabase not configured — schema init skipped.")
+        log.warning("Supabase not configured â€” schema init skipped.")
         return
     ddl = """
     create table if not exists properties (
@@ -513,9 +513,9 @@ def init_schema():
             sb.rpc("exec_sql", {"sql": sql}).execute()
             log.info("Schema OK: %s", label)
         except Exception as e:
-            log.warning("Schema init (%s) via RPC unavailable (%s) — run DDL manually.", label, e)
+            log.warning("Schema init (%s) via RPC unavailable (%s) â€” run DDL manually.", label, e)
 
-# ── Twilio / WhatsApp ─────────────────────────────────────────────────────────
+# â”€â”€ Twilio / WhatsApp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def get_twilio():
     if TWILIO_SID and TWILIO_TOKEN:
         return TwilioClient(TWILIO_SID, TWILIO_TOKEN)
@@ -550,23 +550,23 @@ def handle_inbound_whatsapp(from_num: str, body: str) -> str:
                                  "to_number": TWILIO_WA_FROM, "body": body})
     cmd = body.strip().upper()
     if cmd in ("HI", "HELLO", "HELP", "START"):
-        return ("*West Melbourne Industrial Property Agent* 🏭\n\n"
+        return ("*West Melbourne Industrial Property Agent* ðŸ­\n\n"
                 "Commands:\n"
-                "• *LIST* — available properties\n"
-                "• *BRIEF* — today's market brief\n"
-                "• *DEALS* — recent transactions\n"
-                "• *STATS* — market statistics\n"
-                "• *CONTACT* — agent contact info\n"
+                "â€¢ *LIST* â€” available properties\n"
+                "â€¢ *BRIEF* â€” today's market brief\n"
+                "â€¢ *DEALS* â€” recent transactions\n"
+                "â€¢ *STATS* â€” market statistics\n"
+                "â€¢ *CONTACT* â€” agent contact info\n"
                 "Reply with any of the above keywords.")
     if cmd == "LIST":
         props = sb_select("properties", filters={"status": "Available"}, limit=5)
         if not props:
             return "No available properties at this time. Check back soon."
-        lines = ["*Available Properties — West Melbourne*\n"]
+        lines = ["*Available Properties â€” West Melbourne*\n"]
         for p in props:
             price = f"${p.get('asking_rent_pa',0):,.0f}/pa" if p.get("asking_rent_pa") else \
                     (f"${p.get('asking_price',0):,.0f}" if p.get("asking_price") else "POA")
-            lines.append(f"📍 {p.get('address','N/A')}\n"
+            lines.append(f"ðŸ“ {p.get('address','N/A')}\n"
                          f"   {p.get('property_type','')} | {p.get('size_sqm','')} sqm | {price}\n")
         return "\n".join(lines)
     if cmd == "BRIEF":
@@ -580,7 +580,7 @@ def handle_inbound_whatsapp(from_num: str, body: str) -> str:
             return "No recent deals recorded."
         lines = ["*Recent Transactions*\n"]
         for d in deals:
-            lines.append(f"• {d.get('deal_type','')} — {d.get('status','')}\n"
+            lines.append(f"â€¢ {d.get('deal_type','')} â€” {d.get('status','')}\n"
                          f"  ${d.get('price',0):,.0f} | {d.get('agent_name','')}\n")
         return "\n".join(lines)
     if cmd == "STATS":
@@ -588,20 +588,20 @@ def handle_inbound_whatsapp(from_num: str, body: str) -> str:
         available  = sb_count("properties", {"status": "Available"})
         leased     = sb_count("properties", {"status": "Leased"})
         sold       = sb_count("properties", {"status": "Sold"})
-        return (f"*Market Statistics — West Melbourne Industrial*\n\n"
+        return (f"*Market Statistics â€” West Melbourne Industrial*\n\n"
                 f"Total Listings: {total}\n"
-                f"✅ Available: {available}\n"
-                f"🔵 Leased: {leased}\n"
-                f"🟣 Sold: {sold}\n"
+                f"âœ… Available: {available}\n"
+                f"ðŸ”µ Leased: {leased}\n"
+                f"ðŸŸ£ Sold: {sold}\n"
                 f"Vacancy Rate: {round(available/total*100 if total else 0, 1)}%")
     if cmd == "CONTACT":
         return ("*Agent Contact*\n\n"
                 "West Melbourne Industrial Property\n"
-                "📞 Contact your agent directly.\n"
-                "🌐 Reply HELP for all commands.")
+                "ðŸ“ž Contact your agent directly.\n"
+                "ðŸŒ Reply HELP for all commands.")
     return ("Sorry, I didn't understand that.\nReply *HELP* to see available commands.")
 
-# ── Gmail IMAP ────────────────────────────────────────────────────────────────
+# â”€â”€ Gmail IMAP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _extract_email_address(header: str) -> tuple:
     """Return (display_name, email_address) from a From/Reply-To header string."""
     m = re.match(r"^(.*?)\s*<([^>]+)>", header.strip())
@@ -650,7 +650,7 @@ def analyse_email_with_ai(subject: str, body: str, sender_name: str = "") -> dic
                 "  \"inquiry_type\": \"lease|sale|inspection|market|general|none\",\n"
                 "  \"properties_mentioned\": [\"address or description\"],\n"
                 "  \"not_required\": false,\n"
-                "  \"contact_update\": \"Hot|Warm|Cold|null — updated lead status if known contact\"\n"
+                "  \"contact_update\": \"Hot|Warm|Cold|null â€” updated lead status if known contact\"\n"
                 "}\n"
                 "Priority rules: critical=deadline/offer/legal, high=active deal/inquiry, "
                 "medium=general business, low=newsletter/FYI/auto. "
@@ -675,14 +675,14 @@ def process_email_full(sender: str, subject: str, body: str,
     1. Dedup by message_id
     2. Extract sender info, match contact
     3. AI triage (priority, action items, inquiry flag)
-    4. SAVE trigger → AI document intake
+    4. SAVE trigger â†’ AI document intake
     5. Create/update inquiry record
     6. Store to email_logs
     Returns the inserted email_log row dict, or None if duplicate.
     """
     sb = get_sb()
 
-    # ── 1. Dedup ──────────────────────────────────────────────────────────────
+    # â”€â”€ 1. Dedup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if message_id and sb:
         try:
             existing = sb.table("email_logs").select("id").eq("message_id", message_id).execute().data
@@ -692,14 +692,14 @@ def process_email_full(sender: str, subject: str, body: str,
         except Exception:
             pass
 
-    # ── 2. Sender info ────────────────────────────────────────────────────────
+    # â”€â”€ 2. Sender info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     sender_name, sender_email = _extract_email_address(sender)
     is_no_reply = any(x in (sender_email + subject).lower()
                       for x in ["no-reply", "noreply", "do-not-reply", "donotreply",
                                  "mailer-daemon", "postmaster", "unsubscribe"])
     save_triggered = "SAVE" in subject.upper()
 
-    # ── 3. Find or create contact ─────────────────────────────────────────────
+    # â”€â”€ 3. Find or create contact â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     contact_id = None
     contact    = None
     if sender_email and not is_no_reply and sb:
@@ -717,7 +717,7 @@ def process_email_full(sender: str, subject: str, body: str,
         except Exception as e:
             log.warning("Contact lookup: %s", e)
 
-    # ── 4. AI triage ──────────────────────────────────────────────────────────
+    # â”€â”€ 4. AI triage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     analysis = analyse_email_with_ai(subject, body, sender_name)
     priority        = analysis.get("priority", "medium")
     action_items    = analysis.get("action_items") or []
@@ -727,7 +727,7 @@ def process_email_full(sender: str, subject: str, body: str,
     ai_summary      = analysis.get("summary", subject)
     reply_status    = "not_required" if not_required else "pending"
 
-    # ── 5. SAVE trigger → AI document intake ──────────────────────────────────
+    # â”€â”€ 5. SAVE trigger â†’ AI document intake â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if save_triggered:
         priority = "critical"
         requires_reply = True
@@ -745,7 +745,7 @@ def process_email_full(sender: str, subject: str, body: str,
         except Exception as e:
             log.error("SAVE trigger AI intake: %s", e)
 
-    # ── 6. Create inquiry if needed ───────────────────────────────────────────
+    # â”€â”€ 6. Create inquiry if needed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     property_id = _guess_property_from_text(subject + " " + body)
     if is_inquiry and sender_email and not is_no_reply:
         sb_insert("inquiries", {
@@ -757,14 +757,14 @@ def process_email_full(sender: str, subject: str, body: str,
             "property_id":   property_id,
         })
 
-    # ── 7. Update contact lead status if AI suggests it ───────────────────────
+    # â”€â”€ 7. Update contact lead status if AI suggests it â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if contact_id and analysis.get("contact_update") in ("Hot", "Warm", "Cold"):
         open_inqs = sb_select("inquiries", {"contact_name": sender_name})
         status_map = {"Hot": "New", "Warm": "New", "Cold": "Contacted"}
         for inq in open_inqs[:1]:
             sb_update("inquiries", inq["id"], {"status": status_map[analysis["contact_update"]]})
 
-    # ── 8. Store email log ────────────────────────────────────────────────────
+    # â”€â”€ 8. Store email log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     row = {
         "sender":           sender,
         "sender_email":     sender_email,
@@ -788,7 +788,7 @@ def process_email_full(sender: str, subject: str, body: str,
         row["received_at"] = received_at
     inserted = sb_insert("email_logs", row)
     result = inserted[0] if inserted else row
-    log.info("Email processed: [%s] %s → priority=%s save=%s",
+    log.info("Email processed: [%s] %s â†’ priority=%s save=%s",
              source, subject[:60], priority, save_triggered)
     return result
 
@@ -826,18 +826,18 @@ def flag_unanswered_emails():
     except Exception as e:
         log.error("flag_unanswered_emails update: %s", e)
 
-    # WhatsApp alert — at most once per calendar day
+    # WhatsApp alert â€” at most once per calendar day
     now = datetime.now(timezone.utc)
     if _last_unanswered_alert is None or _last_unanswered_alert.date() < now.date():
         critical = [r for r in rows if r.get("ai_priority") == "critical"]
         high     = [r for r in rows if r.get("ai_priority") == "high"]
-        lines    = [f"📬 *{len(rows)} unanswered email{'s' if len(rows)!=1 else ''} (>24h)*"]
+        lines    = [f"ðŸ“¬ *{len(rows)} unanswered email{'s' if len(rows)!=1 else ''} (>24h)*"]
         if critical:
-            lines.append(f"🔴 Critical: {critical[0].get('subject','')[:50]}")
+            lines.append(f"ðŸ”´ Critical: {critical[0].get('subject','')[:50]}")
         if high:
-            lines.append(f"🟠 High: {high[0].get('subject','')[:50]}")
+            lines.append(f"ðŸŸ  High: {high[0].get('subject','')[:50]}")
         if len(rows) > 2:
-            lines.append(f"…and {len(rows)-2} more. Check /email-log for full list.")
+            lines.append(f"â€¦and {len(rows)-2} more. Check /email-log for full list.")
         broadcast_whatsapp("\n".join(lines))
         _last_unanswered_alert = now
         log.info("Unanswered alert sent: %d emails", len(rows))
@@ -863,7 +863,7 @@ def get_email_priorities(query: str = "") -> dict:
             e.get("received_at","")
         ))
         answer = (f"{len(filtered)} email{'s' if len(filtered)!=1 else ''} awaiting a reply."
-                  if filtered else "You're all caught up — no unanswered emails.")
+                  if filtered else "You're all caught up â€” no unanswered emails.")
         return {"emails": filtered[:20], "answer": answer, "filter_used": "unanswered"}
 
     if any(w in q_lower for w in ["priority","priorities","important","urgent","today","focus"]):
@@ -985,7 +985,7 @@ def _guess_property_from_text(text: str):
             return p.get("id")
     return None
 
-# ── Excel processing ──────────────────────────────────────────────────────────
+# â”€â”€ Excel processing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 PROPERTY_COLUMN_MAP = {
     "address": ["address", "property address", "street", "location"],
     "suburb": ["suburb", "city", "area"],
@@ -1066,7 +1066,7 @@ def process_excel_file(filepath: str) -> dict:
 
     return {"imported": imported, "skipped": skipped, "errors": errors}
 
-# ── AI Intake Engine ──────────────────────────────────────────────────────────
+# â”€â”€ AI Intake Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _oai_client = None
 
 def get_openai():
@@ -1080,27 +1080,27 @@ INTAKE_SYSTEM_PROMPT = """You are an expert document analyst for MJR West, a com
 specialising in West Melbourne industrial property.
 
 Classify the document into ONE primary type and extract every piece of data present.
-Return ONLY valid JSON — no markdown fences, no commentary, just the JSON object.
+Return ONLY valid JSON â€” no markdown fences, no commentary, just the JSON object.
 
 DOCUMENT TYPE RULES:
-- asset_register    → spreadsheet/list of properties with occupier, landlord, lease details
-- vacancy_schedule  → list of available/upcoming-vacant premises
-- requirements_listing → tenants/buyers searching for space (size, location, budget)
-- deal_tracker      → pipeline of current lease/sale negotiations
-- lease_contract    → executed lease or agreement — the full legal document
-- sales_contract    → executed sale/purchase contract
-- market_report     → market commentary, research, trend data
-- inquiry_email     → inbound enquiry from tenant/buyer
-- inspection_report → property condition report
-- invoice           → financial invoice
-- general_correspondence → letters, memos, emails
-- unknown           → cannot determine
+- asset_register    â†’ spreadsheet/list of properties with occupier, landlord, lease details
+- vacancy_schedule  â†’ list of available/upcoming-vacant premises
+- requirements_listing â†’ tenants/buyers searching for space (size, location, budget)
+- deal_tracker      â†’ pipeline of current lease/sale negotiations
+- lease_contract    â†’ executed lease or agreement â€” the full legal document
+- sales_contract    â†’ executed sale/purchase contract
+- market_report     â†’ market commentary, research, trend data
+- inquiry_email     â†’ inbound enquiry from tenant/buyer
+- inspection_report â†’ property condition report
+- invoice           â†’ financial invoice
+- general_correspondence â†’ letters, memos, emails
+- unknown           â†’ cannot determine
 
 JSON SCHEMA:
 {
   "document_type": "<type from list above>",
   "confidence": 0.85,
-  "summary": "2–3 sentence plain-English summary of what this document is and key numbers.",
+  "summary": "2â€“3 sentence plain-English summary of what this document is and key numbers.",
   "urgency": "low|medium|high|critical",
   "mentioned_companies": ["Exact Pty Ltd name as written", "..."],
   "table_inserts": {
@@ -1186,10 +1186,10 @@ JSON SCHEMA:
 }
 
 STRICT EXTRACTION RULES:
-1. Populate ONLY arrays where real data was found — empty arrays [] are fine
-2. Numeric fields must be numbers or null — NEVER strings
-3. Dates must be "YYYY-MM-DD" strings or null — NEVER free text like "June 2025"
-4. Do not invent or guess — only extract data explicitly present in the document
+1. Populate ONLY arrays where real data was found â€” empty arrays [] are fine
+2. Numeric fields must be numbers or null â€” NEVER strings
+3. Dates must be "YYYY-MM-DD" strings or null â€” NEVER free text like "June 2025"
+4. Do not invent or guess â€” only extract data explicitly present in the document
 5. mentioned_companies: list every company/business name exactly as written
 6. For asset_register: create one properties row per property listed; use occupier/landlord/lease_expiry
 7. For vacancy_schedule: create one vacancies row per premises; also create a properties row marked Available
@@ -1199,7 +1199,7 @@ STRICT EXTRACTION RULES:
     also create a deals row with status=Completed
 11. For all document types containing contacts: also populate the contacts array
 12. rent_psm = rent_pa / size_sqm when both are present but psm is missing
-13. grade must be A, B, C, or empty string — never null
+13. grade must be A, B, C, or empty string â€” never null
 14. REGION FILTER FOR REQUIREMENTS (critical): When processing a requirements_listing or any \
     spreadsheet with a location/region/area column, identify that column. \
     Read the raw region value for every row and store it in the `region` field ALWAYS. \
@@ -1209,14 +1209,14 @@ STRICT EXTRACTION RULES:
     non-West value must be EXCLUDED from table_inserts.requirements entirely. \
     If the document has no region/location column, include all requirements and set region="W". \
     The `region` field must always contain the raw value from the source document (e.g. "W", \
-    "N", "SE") — never leave it null when a region column exists in the source."""
+    "N", "SE") â€” never leave it null when a region column exists in the source."""
 
 
 def extract_text_from_file(filepath: str, filename: str) -> tuple:
     """Return (content, is_image). Images return base64 data-URL; others return plain text."""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
-    # ── Images → base64 for GPT-4o vision ────────────────────────────────────
+    # â”€â”€ Images â†’ base64 for GPT-4o vision â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if ext in ("jpg", "jpeg", "png", "gif", "webp", "bmp", "tiff"):
         try:
             with open(filepath, "rb") as fh:
@@ -1229,7 +1229,7 @@ def extract_text_from_file(filepath: str, filename: str) -> tuple:
             log.error("Image read: %s", exc)
             return "", True
 
-    # ── PDF ───────────────────────────────────────────────────────────────────
+    # â”€â”€ PDF â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if ext == "pdf":
         try:
             import pypdf
@@ -1241,7 +1241,7 @@ def extract_text_from_file(filepath: str, filename: str) -> tuple:
             log.error("PDF read: %s", exc)
             return f"[PDF read failed: {exc}]", False
 
-    # ── Word ──────────────────────────────────────────────────────────────────
+    # â”€â”€ Word â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if ext in ("docx", "doc"):
         try:
             import docx as _docx
@@ -1256,7 +1256,7 @@ def extract_text_from_file(filepath: str, filename: str) -> tuple:
             log.error("DOCX read: %s", exc)
             return f"[Word read failed: {exc}]", False
 
-    # ── Excel ─────────────────────────────────────────────────────────────────
+    # â”€â”€ Excel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if ext in ("xlsx", "xls"):
         try:
             wb = openpyxl.load_workbook(filepath, data_only=True)
@@ -1272,7 +1272,7 @@ def extract_text_from_file(filepath: str, filename: str) -> tuple:
             log.error("Excel read: %s", exc)
             return f"[Excel read failed: {exc}]", False
 
-    # ── Email (.eml) ──────────────────────────────────────────────────────────
+    # â”€â”€ Email (.eml) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if ext == "eml":
         try:
             with open(filepath, "rb") as fh:
@@ -1294,7 +1294,7 @@ def extract_text_from_file(filepath: str, filename: str) -> tuple:
             log.error("EML read: %s", exc)
             return f"[Email read failed: {exc}]", False
 
-    # ── Plain text / CSV / TSV ────────────────────────────────────────────────
+    # â”€â”€ Plain text / CSV / TSV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if ext in ("txt", "csv", "tsv", "md"):
         try:
             with open(filepath, "r", encoding="utf-8", errors="replace") as fh:
@@ -1302,7 +1302,7 @@ def extract_text_from_file(filepath: str, filename: str) -> tuple:
         except Exception as exc:
             return f"[Text read failed: {exc}]", False
 
-    # ── Generic fallback ──────────────────────────────────────────────────────
+    # â”€â”€ Generic fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         with open(filepath, "r", encoding="utf-8", errors="replace") as fh:
             return fh.read()[:20000], False
@@ -1314,7 +1314,7 @@ def analyze_with_gpt4o(content: str, filename: str, is_image: bool = False) -> d
     """Send content to GPT-4o; return parsed JSON analysis dict."""
     client = get_openai()
     if not client:
-        return {"document_type":"unknown","confidence":0,"summary":"OpenAI not configured — add OPENAI_API_KEY to .env",
+        return {"document_type":"unknown","confidence":0,"summary":"OpenAI not configured â€” add OPENAI_API_KEY to .env",
                 "urgency":"low","table_inserts":{},"action_items":[],"key_facts":{}}
     try:
         if is_image:
@@ -1457,7 +1457,7 @@ def store_ai_results(analysis: dict, filename: str) -> dict:
                               "vacancies","requirements","market_data")}
     inserts = analysis.get("table_inserts") or {}
 
-    # ── Properties ─────────────────────────────────────────────────────────────
+    # â”€â”€ Properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for prop in (inserts.get("properties") or []):
         if not (prop.get("address") or "").strip():
             continue
@@ -1472,14 +1472,14 @@ def store_ai_results(analysis: dict, filename: str) -> dict:
         if sb_insert("properties", prop):
             counts["properties"] += 1
 
-    # ── Contacts ───────────────────────────────────────────────────────────────
+    # â”€â”€ Contacts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for contact in (inserts.get("contacts") or []):
         if not (contact.get("name") or "").strip():
             continue
         if sb_insert("contacts", contact):
             counts["contacts"] += 1
 
-    # ── Inquiries ──────────────────────────────────────────────────────────────
+    # â”€â”€ Inquiries â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for inq in (inserts.get("inquiries") or []):
         if not ((inq.get("contact_name") or "") + (inq.get("contact_email") or "")).strip():
             continue
@@ -1488,7 +1488,7 @@ def store_ai_results(analysis: dict, filename: str) -> dict:
         if sb_insert("inquiries", inq):
             counts["inquiries"] += 1
 
-    # ── Deals ──────────────────────────────────────────────────────────────────
+    # â”€â”€ Deals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for deal in (inserts.get("deals") or []):
         _coerce_numeric(deal, ["price","size_sqm","rent_pa","term_years"])
         _coerce_date(deal, ["commencement_date","settlement_date"])
@@ -1496,7 +1496,7 @@ def store_ai_results(analysis: dict, filename: str) -> dict:
         if sb_insert("deals", deal):
             counts["deals"] += 1
 
-    # ── Vacancies ──────────────────────────────────────────────────────────────
+    # â”€â”€ Vacancies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for vac in (inserts.get("vacancies") or []):
         if not (vac.get("address") or "").strip():
             continue
@@ -1507,7 +1507,7 @@ def store_ai_results(analysis: dict, filename: str) -> dict:
         if sb_insert("vacancies", vac):
             counts["vacancies"] += 1
 
-    # ── Requirements ── W-region only; region field preserved for future routing ─
+    # â”€â”€ Requirements â”€â”€ W-region only; region field preserved for future routing â”€
     _WEST_REGIONS = {"w", "west", "west melbourne", "western", "wm"}
     _NON_WEST     = {"n", "north", "ne", "nw", "se", "south east", "southeast",
                      "e", "east", "s", "south", "sw", "c", "central", "cbd"}
@@ -1531,7 +1531,7 @@ def store_ai_results(analysis: dict, filename: str) -> dict:
         if sb_insert("requirements", req):
             counts["requirements"] += 1
 
-    # ── Market Data (executed leases / sales evidence) ─────────────────────────
+    # â”€â”€ Market Data (executed leases / sales evidence) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for md in (inserts.get("market_data") or []):
         if not (md.get("address") or md.get("tenant") or "").strip():
             continue
@@ -1572,7 +1572,7 @@ def link_companies(doc_id: int, mentioned_companies: list) -> dict:
     linked_cont_ids  = []
     linked_doc_ids   = []
 
-    # ── Match against contacts.company ────────────────────────────────────────
+    # â”€â”€ Match against contacts.company â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         all_contacts = sb.table("contacts").select("id,company").execute().data or []
         for ct in all_contacts:
@@ -1582,7 +1582,7 @@ def link_companies(doc_id: int, mentioned_companies: list) -> dict:
     except Exception as e:
         log.warning("link_companies contacts: %s", e)
 
-    # ── Match against properties.occupier + properties.landlord ───────────────
+    # â”€â”€ Match against properties.occupier + properties.landlord â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         all_props = sb.table("properties").select("id,occupier,landlord").execute().data or []
         for pr in all_props:
@@ -1593,7 +1593,7 @@ def link_companies(doc_id: int, mentioned_companies: list) -> dict:
     except Exception as e:
         log.warning("link_companies properties: %s", e)
 
-    # ── Match against other documents' mentioned_companies ────────────────────
+    # â”€â”€ Match against other documents' mentioned_companies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         other_docs = (sb.table("documents")
                         .select("id,mentioned_companies")
@@ -1611,7 +1611,7 @@ def link_companies(doc_id: int, mentioned_companies: list) -> dict:
     except Exception as e:
         log.warning("link_companies documents: %s", e)
 
-    # ── Update this document with its linked IDs ───────────────────────────────
+    # â”€â”€ Update this document with its linked IDs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         sb.table("documents").update({
             "linked_property_ids": json.dumps(linked_prop_ids),
@@ -1621,7 +1621,7 @@ def link_companies(doc_id: int, mentioned_companies: list) -> dict:
     except Exception as e:
         log.warning("link_companies update doc: %s", e)
 
-    # ── Back-link the other documents that share at least one company ──────────
+    # â”€â”€ Back-link the other documents that share at least one company â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for other_id in linked_doc_ids:
         try:
             od_row = (sb.table("documents").select("linked_document_ids")
@@ -1649,7 +1649,7 @@ def process_file_universal(filepath: str, filename: str) -> dict:
     """
     Universal AI intake pipeline.
     1. Extract full text/image from any file type
-    2. Analyse with GPT-4o  →  structured JSON (7-table schema)
+    2. Analyse with GPT-4o  â†’  structured JSON (7-table schema)
     3. Store records to all relevant tables
     4. Embed full raw text (richer semantic signal than summary alone)
     5. Persist document record + embedding
@@ -1672,13 +1672,13 @@ def process_file_universal(filepath: str, filename: str) -> dict:
         "doc_id":            None,
     }
 
-    # ── 1. Extract ────────────────────────────────────────────────────────────
+    # â”€â”€ 1. Extract â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     raw_content, is_image = extract_text_from_file(filepath, filename)
     if not raw_content:
         result.update(status="error", error="Could not extract content from file.")
         return result
 
-    # ── 2. GPT-4o analysis ────────────────────────────────────────────────────
+    # â”€â”€ 2. GPT-4o analysis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     analysis = analyze_with_gpt4o(raw_content, filename, is_image)
 
     result["ai_classification"]  = analysis.get("document_type", "unknown")
@@ -1692,11 +1692,11 @@ def process_file_universal(filepath: str, filename: str) -> dict:
     if analysis.get("error") and result["ai_confidence"] == 0:
         result["error"] = analysis["error"]
 
-    # ── 3. Store extracted records ────────────────────────────────────────────
+    # â”€â”€ 3. Store extracted records â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     counts = store_ai_results(analysis, filename)
     result["counts"] = counts
 
-    # ── 4. Embed full text for maximum semantic coverage ──────────────────────
+    # â”€â”€ 4. Embed full text for maximum semantic coverage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if is_image:
         embed_src = f"{filename} {result['ai_summary']} {' '.join(str(v) for v in (result['key_facts'] or {}).values())}"
     else:
@@ -1704,7 +1704,7 @@ def process_file_universal(filepath: str, filename: str) -> dict:
         embed_src = f"{filename}\n{result['ai_summary']}\n{raw_content[:15000]}"
     embedding = embed_text(embed_src)
 
-    # ── 5. Persist document record ────────────────────────────────────────────
+    # â”€â”€ 5. Persist document record â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     doc_record = {
         "filename":               filename,
         "file_type":              filename.rsplit(".", 1)[-1].lower() if "." in filename else "unknown",
@@ -1733,7 +1733,7 @@ def process_file_universal(filepath: str, filename: str) -> dict:
     doc_id = inserted[0].get("id") if inserted else None
     result["doc_id"] = doc_id
 
-    # ── 6. Cross-link companies ───────────────────────────────────────────────
+    # â”€â”€ 6. Cross-link companies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if doc_id and result["mentioned_companies"]:
         links = link_companies(doc_id, result["mentioned_companies"])
         result["links"] = links
@@ -1742,11 +1742,11 @@ def process_file_universal(filepath: str, filename: str) -> dict:
                  len(links["contact_ids"]), len(links["document_ids"]))
 
     result["status"] = "error" if result["error"] else "complete"
-    log.info("AI intake: %s → %s (conf=%.2f) inserts=%s",
+    log.info("AI intake: %s â†’ %s (conf=%.2f) inserts=%s",
              filename, result["ai_classification"], result["ai_confidence"], counts)
     return result
 
-# ── Outlook capture helpers ───────────────────────────────────────────────────
+# â”€â”€ Outlook capture helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 OUTLOOK_MANIFEST_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -1803,7 +1803,7 @@ OUTLOOK_TASKPANE_HTML = """<!DOCTYPE html>
 <p style="color:#64748b;font-size:11px;margin-bottom:10px">
   Capture the selected email to the property intelligence database.</p>
 <button id="captureBtn" onclick="captureEmail()" disabled>Capture Email</button>
-<div class="status" id="status">Initialising Office.js…</div>
+<div class="status" id="status">Initialising Office.jsâ€¦</div>
 <div class="sub" id="preview"></div>
 <script>
 var BASE = window.location.origin;
@@ -1819,7 +1819,7 @@ Office.onReady(function(info){
 function captureEmail(){
   var btn=document.getElementById('captureBtn');
   var st=document.getElementById('status');
-  btn.disabled=true; st.textContent='Reading email…';
+  btn.disabled=true; st.textContent='Reading emailâ€¦';
   var item=Office.context.mailbox.item;
   var payload={
     subject:item.subject,
@@ -1852,7 +1852,7 @@ function captureEmail(){
 </html>"""
 
 
-# ── Call log helpers ──────────────────────────────────────────────────────────
+# â”€â”€ Call log helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def _find_contact_by_number(number: str):
     """Return first matching contact record by phone number, or None."""
     if not number:
@@ -1957,14 +1957,14 @@ def store_call_logs(rows: list, source_file: str) -> dict:
     return {"saved": saved, "skipped": skipped, "updated_leads": updated_leads}
 
 
-# ── Call recording / Whisper ──────────────────────────────────────────────────
+# â”€â”€ Call recording / Whisper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 AUDIO_EXTENSIONS = {"mp3","mp4","m4a","wav","webm","ogg","flac","aac","mpga","mpeg"}
 
 def transcribe_audio_file(filepath: str, filename: str) -> str:
     """Transcribe audio with OpenAI Whisper. Returns transcript text."""
     client = get_openai()
     if not client:
-        return "[OpenAI not configured — add OPENAI_API_KEY]"
+        return "[OpenAI not configured â€” add OPENAI_API_KEY]"
     try:
         with open(filepath, "rb") as fh:
             resp = client.audio.transcriptions.create(
@@ -2061,7 +2061,7 @@ def get_style_context(n: int = 5) -> str:
     return "\n".join(parts)
 
 
-# ── Calendar / ICS ────────────────────────────────────────────────────────────
+# â”€â”€ Calendar / ICS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def parse_ics_file(filepath: str) -> list:
     """Parse ICS calendar file. Returns list of event dicts."""
     events = []
@@ -2167,12 +2167,12 @@ def check_calendar_briefs():
         time_str = start.strftime("%H:%M")
 
         lines = [
-            f"🗓️ *Pre-Meeting Brief — {title}*",
-            f"⏰ {time_str}  📍 {location}",
+            f"ðŸ—“ï¸ *Pre-Meeting Brief â€” {title}*",
+            f"â° {time_str}  ðŸ“ {location}",
             "",
         ]
 
-        # ── Property record ───────────────────────────────────────────────────
+        # â”€â”€ Property record â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         prop = None
         if location and location != "No location":
             loc_key = location.split(",")[0].strip().lower()
@@ -2192,17 +2192,17 @@ def check_calendar_briefs():
             price = (f"${prop.get('asking_rent_pa',0):,.0f}/pa" if prop.get("asking_rent_pa")
                      else (f"${prop.get('asking_price',0):,.0f}" if prop.get("asking_price") else "POA"))
             lines.append("*Property*")
-            lines.append(f"• {prop.get('address','?')} — {prop.get('size_sqm','?')} sqm")
-            lines.append(f"• {prop.get('property_type','?')} | {prop.get('status','?')} | {price}")
+            lines.append(f"â€¢ {prop.get('address','?')} â€” {prop.get('size_sqm','?')} sqm")
+            lines.append(f"â€¢ {prop.get('property_type','?')} | {prop.get('status','?')} | {price}")
             if prop.get("occupier"):
-                lines.append(f"• Occupier: {prop['occupier']}")
+                lines.append(f"â€¢ Occupier: {prop['occupier']}")
             if prop.get("landlord"):
-                lines.append(f"• Landlord: {prop['landlord']}")
+                lines.append(f"â€¢ Landlord: {prop['landlord']}")
             if prop.get("lease_expiry"):
-                lines.append(f"• Lease Expiry: {str(prop['lease_expiry'])[:10]}")
+                lines.append(f"â€¢ Lease Expiry: {str(prop['lease_expiry'])[:10]}")
             lines.append("")
 
-        # ── Last 3 emails from this company/person ────────────────────────────
+        # â”€â”€ Last 3 emails from this company/person â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         company_hint = ""
         if prop:
             company_hint = prop.get("occupier") or prop.get("landlord") or ""
@@ -2228,15 +2228,15 @@ def check_calendar_briefs():
                 nm  = (e.get("sender_name") or e.get("sender") or "?")[:20]
                 sub = (e.get("subject") or "")[:40]
                 dt  = (e.get("received_at") or "")[:10]
-                lines.append(f"• {dt} {nm} — {sub}")
+                lines.append(f"â€¢ {dt} {nm} â€” {sub}")
             lines.append("")
 
-        # ── Semantic search context ───────────────────────────────────────────
+        # â”€â”€ Semantic search context â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         sem_context = []
         search_query = f"{title} {company_hint} West Melbourne industrial"
         try:
             sem_results = semantic_search(search_query, threshold=0.3, n=3)
-            sem_context = [f"• {r.get('ai_summary','')[:80]}" for r in sem_results if r.get("ai_summary")]
+            sem_context = [f"â€¢ {r.get('ai_summary','')[:80]}" for r in sem_results if r.get("ai_summary")]
         except Exception:
             pass
         if sem_context:
@@ -2244,7 +2244,7 @@ def check_calendar_briefs():
             lines.extend(sem_context[:3])
             lines.append("")
 
-        # ── GPT-4o talking points ─────────────────────────────────────────────
+        # â”€â”€ GPT-4o talking points â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         client = get_openai()
         if client:
             context_text = "\n".join(lines)
@@ -2269,7 +2269,7 @@ def check_calendar_briefs():
             except Exception as e:
                 log.warning("Pre-meeting talking points GPT: %s", e)
 
-        lines.append("Good luck — check /calendar for full details.")
+        lines.append("Good luck â€” check /calendar for full details.")
         broadcast_whatsapp("\n".join(lines))
 
         try:
@@ -2279,7 +2279,7 @@ def check_calendar_briefs():
         log.info("Enhanced pre-meeting brief sent for: %s", title)
 
 
-# ── Fee engine ────────────────────────────────────────────────────────────────
+# â”€â”€ Fee engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 INSTITUTIONAL_CLIENTS = [
     "Dexus", "GPT Group", "Charter Hall", "Goodman", "ESR",
     "Logos", "Centuria", "ISPT", "Mirvac", "Growthpoint"
@@ -2359,7 +2359,7 @@ def calculate_fee_for_deal(deal: dict) -> float | None:
     return round(fee, 2)
 
 
-# ── Landlord portfolio builder ─────────────────────────────────────────────────
+# â”€â”€ Landlord portfolio builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def build_landlord_portfolios() -> list:
     """Aggregate all properties by landlord with tenants, expiries, vacancies, fees."""
     props    = sb_select("properties")
@@ -2423,16 +2423,16 @@ def build_landlord_portfolios() -> list:
     return sorted(landlords.values(), key=lambda x: x["total_sqm"], reverse=True)
 
 
-# ── Market Briefings ──────────────────────────────────────────────────────────
+# â”€â”€ Market Briefings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _MOTIVATIONAL_QUOTES = [
-    "The best investment on earth is earth. — Louis Glickman",
-    "Buy land, they're not making it anymore. — Mark Twain",
-    "In real estate, you make 10% of your money because you're a genius and 90% because you catch a great wave. — Jeff Greene",
-    "Ninety percent of all millionaires become so through owning real estate. — Andrew Carnegie",
-    "Real estate is an imperishable asset, ever increasing in value. It is the most solid security that human ingenuity has devised. — Russell Sage",
-    "Every person who invests in well-selected real estate in a growing section of a prosperous community adopts the surest and safest method of becoming independent. — Theodore Roosevelt",
-    "The trouble with real estate is that it's local. You have to understand the local market. — Robert Kiyosaki",
-    "Don't wait to buy real estate. Buy real estate and wait. — Will Rogers",
+    "The best investment on earth is earth. â€” Louis Glickman",
+    "Buy land, they're not making it anymore. â€” Mark Twain",
+    "In real estate, you make 10% of your money because you're a genius and 90% because you catch a great wave. â€” Jeff Greene",
+    "Ninety percent of all millionaires become so through owning real estate. â€” Andrew Carnegie",
+    "Real estate is an imperishable asset, ever increasing in value. It is the most solid security that human ingenuity has devised. â€” Russell Sage",
+    "Every person who invests in well-selected real estate in a growing section of a prosperous community adopts the surest and safest method of becoming independent. â€” Theodore Roosevelt",
+    "The trouble with real estate is that it's local. You have to understand the local market. â€” Robert Kiyosaki",
+    "Don't wait to buy real estate. Buy real estate and wait. â€” Will Rogers",
 ]
 
 def build_market_brief() -> str:
@@ -2450,18 +2450,18 @@ def build_market_brief() -> str:
     date_str  = datetime.now().strftime("%A, %d %B %Y")
 
     lines = [
-        "🏭 *West Melbourne Industrial — Daily Brief*",
-        f"📅 {date_str}",
+        "ðŸ­ *West Melbourne Industrial â€” Daily Brief*",
+        f"ðŸ“… {date_str}",
         "",
         "*Market Snapshot*",
-        f"• Total Listings: {total}",
-        f"• Available: {available} ({vacancy}% vacancy)",
-        f"• Under Offer: {under}  |  Leased: {leased}  |  Sold: {sold}",
-        f"• New Inquiries: {new_inq}",
+        f"â€¢ Total Listings: {total}",
+        f"â€¢ Available: {available} ({vacancy}% vacancy)",
+        f"â€¢ Under Offer: {under}  |  Leased: {leased}  |  Sold: {sold}",
+        f"â€¢ New Inquiries: {new_inq}",
         "",
     ]
 
-    # ── Today's calendar meetings ──────────────────────────────────────────────
+    # â”€â”€ Today's calendar meetings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         today_start = datetime.now().strftime("%Y-%m-%d") + "T00:00:00"
         today_end   = datetime.now().strftime("%Y-%m-%d") + "T23:59:59"
@@ -2480,13 +2480,13 @@ def build_market_brief() -> str:
         lines.append("*Today's Meetings*")
         for ev in cal_rows[:5]:
             t   = (ev.get("start_dt") or "")[:16].replace("T", " ")[-5:]
-            tag = " 🏭" if ev.get("is_property_related") else ""
-            lines.append(f"🗓️ {t} — {ev.get('title','?')[:45]}{tag}")
+            tag = " ðŸ­" if ev.get("is_property_related") else ""
+            lines.append(f"ðŸ—“ï¸ {t} â€” {ev.get('title','?')[:45]}{tag}")
             if ev.get("location"):
-                lines.append(f"   📍 {ev['location'][:40]}")
+                lines.append(f"   ðŸ“ {ev['location'][:40]}")
         lines.append("")
 
-    # ── Unanswered emails ──────────────────────────────────────────────────────
+    # â”€â”€ Unanswered emails â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         unanswered = sb_select("email_logs", order="received_at", limit=100) if get_sb() else []
         pending = [e for e in unanswered
@@ -2494,17 +2494,17 @@ def build_market_brief() -> str:
     except Exception:
         pending = []
     if pending:
-        lines.append(f"*📬 Unanswered Emails: {len(pending)}*")
+        lines.append(f"*ðŸ“¬ Unanswered Emails: {len(pending)}*")
         for e in pending[:4]:
             nm = (e.get("sender_name") or e.get("sender") or "?")[:25]
             sub = (e.get("subject") or "")[:40]
             pri = (e.get("ai_priority") or "").upper()[:4]
-            lines.append(f"• [{pri}] {nm} — {sub}")
+            lines.append(f"â€¢ [{pri}] {nm} â€” {sub}")
         if len(pending) > 4:
-            lines.append(f"  …and {len(pending)-4} more")
+            lines.append(f"  â€¦and {len(pending)-4} more")
         lines.append("")
 
-    # ── Top 5 hot leads by score ───────────────────────────────────────────────
+    # â”€â”€ Top 5 hot leads by score â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         all_inq = sb_select("inquiries", order="created_at", limit=50)
         scored  = sorted([dict(i, _s=score_lead(i)) for i in all_inq],
@@ -2513,15 +2513,15 @@ def build_market_brief() -> str:
     except Exception:
         hot_leads = []
     if hot_leads:
-        lines.append("*🔥 Hot Leads*")
+        lines.append("*ðŸ”¥ Hot Leads*")
         for i in hot_leads:
             nm  = (i.get("contact_name") or "?")[:22]
-            ph  = i.get("contact_phone") or i.get("contact_email") or "—"
+            ph  = i.get("contact_phone") or i.get("contact_email") or "â€”"
             src = i.get("source", "")[:10]
-            lines.append(f"• {nm}  {ph}  [{src}]")
+            lines.append(f"â€¢ {nm}  {ph}  [{src}]")
         lines.append("")
 
-    # ── Lease expiries within 90 days ─────────────────────────────────────────
+    # â”€â”€ Lease expiries within 90 days â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         today   = _date.today()
         in_90   = _date(today.year + (1 if today.month > 9 else 0),
@@ -2543,43 +2543,43 @@ def build_market_brief() -> str:
     except Exception:
         expiring = []
     if expiring:
-        lines.append("*⏰ Leases Expiring < 90 Days*")
+        lines.append("*â° Leases Expiring < 90 Days*")
         for days, p in expiring[:4]:
             lines.append(
-                f"• {p.get('address','?')[:35]} — "
+                f"â€¢ {p.get('address','?')[:35]} â€” "
                 f"{p.get('occupier') or p.get('landlord') or '?'} "
                 f"({days}d)"
             )
         lines.append("")
 
-    # ── New requirements ───────────────────────────────────────────────────────
+    # â”€â”€ New requirements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         recent_reqs = sb_select("requirements", order="created_at", limit=3)
     except Exception:
         recent_reqs = []
     if recent_reqs:
-        lines.append("*📋 Recent Requirements (West)*")
+        lines.append("*ðŸ“‹ Recent Requirements (West)*")
         for r in recent_reqs:
-            sz = f"{r.get('size_min_sqm','?')}–{r.get('size_max_sqm','?')} sqm"
-            lines.append(f"• {r.get('company','?')[:25]} — {sz} — {r.get('preferred_location','West Melbourne')}")
+            sz = f"{r.get('size_min_sqm','?')}â€“{r.get('size_max_sqm','?')} sqm"
+            lines.append(f"â€¢ {r.get('company','?')[:25]} â€” {sz} â€” {r.get('preferred_location','West Melbourne')}")
         lines.append("")
 
-    # ── Featured available listings ───────────────────────────────────────────
+    # â”€â”€ Featured available listings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try:
         featured = sb_select("properties", filters={"status": "Available"}, order="created_at", limit=3)
     except Exception:
         featured = []
     if featured:
-        lines.append("*📍 Featured Listings*")
+        lines.append("*ðŸ“ Featured Listings*")
         for p in featured:
             price = (f"${p.get('asking_rent_pa', 0):,.0f}/pa" if p.get("asking_rent_pa")
                      else (f"${p.get('asking_price', 0):,.0f}" if p.get("asking_price") else "POA"))
-            lines.append(f"• {p.get('address','N/A')[:35]}")
+            lines.append(f"â€¢ {p.get('address','N/A')[:35]}")
             lines.append(f"  {p.get('property_type','')} | {p.get('size_sqm','')} sqm | {price}")
         lines.append("")
 
-    # ── Quote of the day ───────────────────────────────────────────────────────
-    lines.append(f"💬 _{random.choice(_MOTIVATIONAL_QUOTES)}_")
+    # â”€â”€ Quote of the day â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    lines.append(f"ðŸ’¬ _{random.choice(_MOTIVATIONAL_QUOTES)}_")
     lines.append("")
     lines.append("Reply HELP for commands.")
     return "\n".join(lines)
@@ -2600,13 +2600,13 @@ def send_weekly_briefing():
     log.info("Running weekly briefing job.")
     deals = sb_select("deals", order="created_at", limit=5)
     base  = build_market_brief()
-    extra_lines = ["\n*📊 Weekly Transaction Summary*"]
+    extra_lines = ["\n*ðŸ“Š Weekly Transaction Summary*"]
     if deals:
         for d in deals:
             price = f"${d.get('price', 0):,.0f}" if d.get("price") else "Undisclosed"
-            extra_lines.append(f"• {d.get('deal_type', 'Deal')} | {price} | {d.get('status', '')}")
+            extra_lines.append(f"â€¢ {d.get('deal_type', 'Deal')} | {price} | {d.get('status', '')}")
     else:
-        extra_lines.append("• No transactions recorded this week.")
+        extra_lines.append("â€¢ No transactions recorded this week.")
     content = base + "\n".join(extra_lines)
     broadcast_whatsapp(content)
     sb_insert("briefings", {
@@ -2621,7 +2621,7 @@ def check_gmail_job():
     fetch_gmail_emails()
 
 
-# ── Relationship decay alerts ─────────────────────────────────────────────────
+# â”€â”€ Relationship decay alerts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def check_relationship_decay():
     """
     Weekly job: WhatsApp alert for contacts not touched in 30+ days
@@ -2667,7 +2667,7 @@ def check_relationship_decay():
             except Exception:
                 pass
         else:
-            pass  # never contacted — always include if they have expiring leases
+            pass  # never contacted â€” always include if they have expiring leases
 
         # check if this contact is linked to an expiring property (by company name match)
         cname = _normalise_company(c.get("company") or c.get("name") or "")
@@ -2689,7 +2689,7 @@ def check_relationship_decay():
         log.info("Relationship decay check: no stale contacts with expiring leases.")
         return
 
-    lines = [f"🤝 *Relationship Decay Alert — {len(stale)} contact{'s' if len(stale)!=1 else ''}*",
+    lines = [f"ðŸ¤ *Relationship Decay Alert â€” {len(stale)} contact{'s' if len(stale)!=1 else ''}*",
              "These landlords/tenants haven't been contacted in 30+ days and have leases expiring:"]
     for item in sorted(stale, key=lambda x: x["months_away"])[:8]:
         c  = item["contact"]
@@ -2697,14 +2697,14 @@ def check_relationship_decay():
         mo = item["months_away"]
         ph = c.get("phone") or c.get("email") or "no details"
         lines.append(
-            f"• {c.get('name','?')} ({c.get('company','')}) — "
-            f"{p.get('address','?')[:35]} expires {mo}mo · {ph}"
+            f"â€¢ {c.get('name','?')} ({c.get('company','')}) â€” "
+            f"{p.get('address','?')[:35]} expires {mo}mo Â· {ph}"
         )
     broadcast_whatsapp("\n".join(lines))
     log.info("Relationship decay alert sent: %d contacts", len(stale))
 
 
-# ── Vacancy ↔ Requirements matching ──────────────────────────────────────────
+# â”€â”€ Vacancy â†” Requirements matching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def match_vacancies_to_requirements():
     """
     Daily job: match new vacancies against active requirements by size range + region.
@@ -2728,7 +2728,7 @@ def match_vacancies_to_requirements():
         vac_sub = (vac.get("suburb") or "West Melbourne").lower()
         vac_addr = vac.get("address") or "?"
         for req in requirements:
-            # region gate — only West Melbourne requirements
+            # region gate â€” only West Melbourne requirements
             region_key = (req.get("region") or "w").strip().lower()
             if region_key not in _WEST:
                 continue
@@ -2739,7 +2739,7 @@ def match_vacancies_to_requirements():
             # size match with 15% tolerance
             if vac_sqm == 0 or not (sz_min * 0.85 <= vac_sqm <= sz_max * 1.15):
                 continue
-            # suburb match — prefer same suburb but accept West Melbourne broadly
+            # suburb match â€” prefer same suburb but accept West Melbourne broadly
             req_loc = (req.get("preferred_location") or "").lower()
             if req_loc and req_loc not in vac_sub and vac_sub not in req_loc:
                 if not any(w in req_loc for w in ["west", "any", "all", ""]):
@@ -2779,16 +2779,16 @@ def match_vacancies_to_requirements():
         log.info("Vacancy matching: no new matches found.")
         return
 
-    lines = [f"🏭 *{len(new_matches)} New Vacancy Match{'es' if len(new_matches)!=1 else ''}*"]
+    lines = [f"ðŸ­ *{len(new_matches)} New Vacancy Match{'es' if len(new_matches)!=1 else ''}*"]
     for m in new_matches[:6]:
         v, r = m["vac"], m["req"]
         lines.append(
-            f"• {v.get('address','?')[:35]} ({v.get('size_sqm','?')} sqm) "
-            f"↔ {r.get('company','?')[:25]} ({r.get('size_min_sqm','?')}–"
+            f"â€¢ {v.get('address','?')[:35]} ({v.get('size_sqm','?')} sqm) "
+            f"â†” {r.get('company','?')[:25]} ({r.get('size_min_sqm','?')}â€“"
             f"{r.get('size_max_sqm','?')} sqm)"
         )
     if len(new_matches) > 6:
-        lines.append(f"…and {len(new_matches)-6} more — check the dashboard.")
+        lines.append(f"â€¦and {len(new_matches)-6} more â€” check the dashboard.")
     broadcast_whatsapp("\n".join(lines))
 
     # mark all as alerted
@@ -2809,7 +2809,7 @@ def match_vacancies_to_requirements():
     log.info("Vacancy matching: %d new matches alerted.", len(new_matches))
 
 
-# ── Post-meeting note AI processing ──────────────────────────────────────────
+# â”€â”€ Post-meeting note AI processing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def process_meeting_notes(event: dict, notes_text: str):
     """
     GPT-4o processes post-meeting notes:
@@ -2894,7 +2894,7 @@ Return JSON only:
     log.info("Meeting notes processed for event %s", event_id)
 
 
-# ── APScheduler ───────────────────────────────────────────────────────────────
+# â”€â”€ APScheduler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 scheduler = BackgroundScheduler(timezone=TIMEZONE)
 scheduler.add_job(send_daily_briefing,  CronTrigger(hour=BRIEFING_HOUR, minute=BRIEFING_MINUTE),
                   id="daily_brief",   replace_existing=True)
@@ -2911,7 +2911,7 @@ scheduler.add_job(check_relationship_decay, CronTrigger(day_of_week="fri", hour=
 scheduler.add_job(match_vacancies_to_requirements, CronTrigger(hour=6, minute=0),
                   id="vacancy_match", replace_existing=True)
 
-# ── Auth decorator ────────────────────────────────────────────────────────────
+# â”€â”€ Auth decorator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -2924,9 +2924,9 @@ def login_required(f):
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
 
-# ── Lead scoring ─────────────────────────────────────────────────────────────
+# â”€â”€ Lead scoring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def score_lead(inq: dict) -> int:
-    """Return urgency score 1–4 for an inquiry."""
+    """Return urgency score 1â€“4 for an inquiry."""
     score = 1
     msg = ((inq.get("message") or "") + " " + (inq.get("contact_name") or "")).lower()
     hot_words = ["urgent", "asap", "today", "tomorrow", "immediately", "must", "deadline", "eoi"]
@@ -2952,12 +2952,12 @@ def urgency_badge(score: int) -> str:
     return (f'<span style="background:{bg};color:{fg};font-size:.65rem;font-weight:700;'
             f'padding:.25em .55em;border-radius:4px;letter-spacing:.06em">{lbl}</span>')
 
-# ── HTML Templates ────────────────────────────────────────────────────────────
+# â”€â”€ HTML Templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _LAYOUT = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>{{ title }} — MJR West Agent</title>
+<title>{{ title }} â€” MJR West Agent</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -2968,11 +2968,11 @@ _LAYOUT = r"""<!DOCTYPE html>
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--text);min-height:100vh;
      font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
-/* ─── Scrollbar ─── */
+/* â”€â”€â”€ Scrollbar â”€â”€â”€ */
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--bg2)}
 ::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:3px}
-/* ─── Sidebar ─── */
+/* â”€â”€â”€ Sidebar â”€â”€â”€ */
 .sidebar{position:fixed;top:0;left:0;width:var(--sb);height:100vh;
   background:var(--bg2);border-right:1px solid var(--border);
   overflow-y:auto;z-index:200;display:flex;flex-direction:column}
@@ -2994,19 +2994,19 @@ body{background:var(--bg);color:var(--text);min-height:100vh;
 .nav-link.active i{opacity:1}
 .nav-badge{background:var(--amber);color:#000;font-size:.6rem;font-weight:800;
   padding:.15em .45em;border-radius:20px;margin-left:auto}
-/* ─── Main ─── */
+/* â”€â”€â”€ Main â”€â”€â”€ */
 .main{margin-left:var(--sb);padding:1.6rem 1.8rem;min-height:100vh}
-/* ─── Page header ─── */
+/* â”€â”€â”€ Page header â”€â”€â”€ */
 .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.4rem}
 .ph h4{font-weight:800;color:#fff;margin:0;font-size:1.15rem;letter-spacing:-.02em}
 .ph p{color:var(--text2);font-size:.8rem;margin:.2rem 0 0}
-/* ─── Cards ─── */
+/* â”€â”€â”€ Cards â”€â”€â”€ */
 .card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .card-header{background:transparent;border-bottom:1px solid var(--border);
   font-weight:700;font-size:.8rem;color:var(--text3);letter-spacing:.04em;
   text-transform:uppercase;padding:.75rem 1.1rem}
 .card-body{padding:1.1rem}
-/* ─── KPI tiles ─── */
+/* â”€â”€â”€ KPI tiles â”€â”€â”€ */
 .kpi{background:var(--bg3);border:1px solid var(--border);border-radius:12px;
   padding:1.1rem 1.2rem;height:100%}
 .kpi-val{font-size:1.8rem;font-weight:900;color:#fff;line-height:1;letter-spacing:-.03em}
@@ -3019,14 +3019,14 @@ body{background:var(--bg);color:var(--text);min-height:100vh;
 .kpi-delta{font-size:.7rem;margin-top:.4rem}
 .kpi-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;
   justify-content:center;font-size:1rem}
-/* ─── Morning brief banner ─── */
+/* â”€â”€â”€ Morning brief banner â”€â”€â”€ */
 .brief-banner{background:linear-gradient(135deg,#111827 0%,#1c2e1a 100%);
   border:1px solid #1f3d1a;border-radius:12px;padding:1.1rem 1.4rem;margin-bottom:1.4rem}
 .brief-banner .date-str{color:var(--amber);font-size:.72rem;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase}
 .brief-banner h5{color:#fff;font-weight:800;margin:.2rem 0 .1rem;font-size:1rem}
 .brief-banner p{color:#86efac;font-size:.8rem;margin:0}
-/* ─── Call list ─── */
+/* â”€â”€â”€ Call list â”€â”€â”€ */
 .call-item{display:flex;align-items:center;gap:.75rem;padding:.65rem .8rem;
   border-radius:8px;border:1px solid var(--border);margin-bottom:.4rem;
   background:var(--bg2);transition:border-color .15s}
@@ -3043,27 +3043,27 @@ body{background:var(--bg);color:var(--text);min-height:100vh;
 .btn-call:hover{background:var(--amber);color:#000}
 .btn-done{background:rgba(16,185,129,.1);color:#10b981;border:1px solid #065f46;
   border-radius:6px;padding:.25rem .55rem;font-size:.72rem;font-weight:700;cursor:pointer}
-/* ─── Tables ─── */
+/* â”€â”€â”€ Tables â”€â”€â”€ */
 .table{color:var(--text);--bs-table-bg:transparent;--bs-table-hover-bg:rgba(245,158,11,.04)}
 .table th{font-size:.67rem;text-transform:uppercase;letter-spacing:.07em;
   color:#2d4a6b;font-weight:800;border-color:var(--border);border-top:none;padding:.6rem .8rem}
 .table td{font-size:.81rem;vertical-align:middle;border-color:var(--border);padding:.55rem .8rem}
 .table-hover tbody tr:hover{--bs-table-accent-bg:rgba(245,158,11,.04)}
-/* ─── Badges ─── */
+/* â”€â”€â”€ Badges â”€â”€â”€ */
 .badge{font-size:.65rem;font-weight:700;padding:.3em .6em;border-radius:5px}
 .badge-available{background:#052e16;color:#4ade80;border:1px solid #14532d}
 .badge-leased{background:#0c1a35;color:#60a5fa;border:1px solid #1e3a5f}
 .badge-sold{background:#1a0533;color:#c084fc;border:1px solid #3b0764}
 .badge-offer{background:#2d1a00;color:#fbbf24;border:1px solid #78350f}
 .badge-new{background:#2d000a;color:#f87171;border:1px solid #7f1d1d}
-/* ─── Buttons ─── */
+/* â”€â”€â”€ Buttons â”€â”€â”€ */
 .btn-primary{background:var(--amber);border-color:var(--amber);color:#000;font-weight:700}
 .btn-primary:hover{background:var(--amber-lt);border-color:var(--amber-lt);color:#000}
 .btn-outline-secondary{border-color:var(--border);color:var(--text3)}
 .btn-outline-secondary:hover{background:rgba(255,255,255,.06);color:var(--text);border-color:#334155}
 .btn-sm{font-size:.75rem;padding:.3rem .65rem}
 .btn-xs{font-size:.68rem;padding:.2rem .5rem}
-/* ─── Forms ─── */
+/* â”€â”€â”€ Forms â”€â”€â”€ */
 .form-control,.form-select{background:var(--bg2);border:1px solid var(--border);
   color:var(--text);font-size:.83rem;border-radius:8px}
 .form-control:focus,.form-select:focus{background:var(--bg2);color:var(--text);
@@ -3076,10 +3076,10 @@ body{background:var(--bg);color:var(--text);min-height:100vh;
 .modal-footer{border-top:1px solid var(--border)}
 .modal-title{font-size:.9rem;font-weight:800;color:#fff}
 .btn-close{filter:invert(1) opacity(.5)}
-/* ─── Alert/toast ─── */
+/* â”€â”€â”€ Alert/toast â”€â”€â”€ */
 .toast-container{position:fixed;top:1rem;right:1rem;z-index:9999}
 .toast{background:var(--bg3);border:1px solid var(--border);color:var(--text)}
-/* ─── Misc ─── */
+/* â”€â”€â”€ Misc â”€â”€â”€ */
 pre{color:var(--text3);font-size:.78rem}
 code{color:var(--amber)}
 .alert-info{background:rgba(56,189,248,.07);border-color:#0e4f6b;color:#7dd3fc}
@@ -3156,7 +3156,7 @@ _LOGIN_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>MJR West Agent — Sign In</title>
+<title>MJR West Agent â€” Sign In</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -3215,7 +3215,7 @@ input:focus{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.18)}
 def render_layout(content, title="Dashboard", active=""):
     return render_template_string(_LAYOUT, content=content, title=title, active=active)
 
-# ── Route helpers ─────────────────────────────────────────────────────────────
+# â”€â”€ Route helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def status_badge(status):
     m = {"Available": "badge-available", "Leased": "badge-leased",
          "Sold": "badge-sold", "Under Offer": "badge-offer",
@@ -3225,7 +3225,7 @@ def status_badge(status):
 
 def fmt_currency(val):
     if val is None:
-        return "—"
+        return "â€”"
     try:
         return f"${float(val):,.0f}"
     except (ValueError, TypeError):
@@ -3233,13 +3233,13 @@ def fmt_currency(val):
 
 def fmt_date(s):
     if not s:
-        return "—"
+        return "â€”"
     try:
         return datetime.fromisoformat(str(s).replace("Z", "+00:00")).strftime("%d %b %Y")
     except Exception:
         return str(s)[:10]
 
-# ── Views ─────────────────────────────────────────────────────────────────────
+# â”€â”€ Views â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/")
 def index():
     return redirect(url_for("dashboard"))
@@ -3293,7 +3293,7 @@ def dashboard():
     call_items = ""
     for i in call_list:
         nm  = i.get("contact_name") or "Unknown"
-        ph  = i.get("contact_phone") or i.get("contact_email") or "—"
+        ph  = i.get("contact_phone") or i.get("contact_email") or "â€”"
         sc  = i["_score"]
         src = i.get("source", "")
         src_icon = {"WhatsApp": "bi-whatsapp", "Email": "bi-envelope-fill",
@@ -3312,15 +3312,15 @@ def dashboard():
   </div>
 </div>"""
     if not call_items:
-        call_items = '<p style="color:#2d4a6b;font-size:.82rem;text-align:center;padding:1.5rem 0">No active leads — <a href="/inquiries" style="color:#f59e0b">view pipeline</a></p>'
+        call_items = '<p style="color:#2d4a6b;font-size:.82rem;text-align:center;padding:1.5rem 0">No active leads â€” <a href="/inquiries" style="color:#f59e0b">view pipeline</a></p>'
 
     # Hot leads pipeline rows
     pipeline_rows = ""
     for i in hot_leads:
         sc = i["_score"]
         pipeline_rows += f"""<tr>
-          <td style="font-weight:700;color:#fff">{i.get('contact_name','—')}</td>
-          <td style="color:#64748b;font-size:.76rem">{i.get('source','—')}</td>
+          <td style="font-weight:700;color:#fff">{i.get('contact_name','â€”')}</td>
+          <td style="color:#64748b;font-size:.76rem">{i.get('source','â€”')}</td>
           <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
                      color:#94a3b8;font-size:.76rem">{(i.get('message') or '')[:50]}</td>
           <td>{urgency_badge(sc)}</td>
@@ -3332,11 +3332,11 @@ def dashboard():
 
     # Properties table
     prop_rows = "".join(f"""<tr>
-        <td style="font-weight:700;color:#fff">{p.get('address','—')}</td>
-        <td style="color:#64748b">{p.get('property_type','—')}</td>
-        <td style="color:#94a3b8">{p.get('size_sqm','—')}</td>
+        <td style="font-weight:700;color:#fff">{p.get('address','â€”')}</td>
+        <td style="color:#64748b">{p.get('property_type','â€”')}</td>
+        <td style="color:#94a3b8">{p.get('size_sqm','â€”')}</td>
         <td style="color:#f59e0b">{fmt_currency(p.get('asking_rent_pa') or p.get('asking_price'))}</td>
-        <td>{status_badge(p.get('status','—'))}</td>
+        <td>{status_badge(p.get('status','â€”'))}</td>
         <td><a href="/properties/{p['id']}/edit" class="btn btn-xs btn-outline-secondary">Edit</a></td>
     </tr>""" for p in recent_props)
 
@@ -3469,7 +3469,7 @@ def dashboard():
               <i class="bi bi-sun-fill"></i></div>
             <div>
               <div style="font-size:.78rem;font-weight:700;color:#fff">Morning Brief</div>
-              <div style="font-size:.7rem;color:#64748b">{BRIEFING_HOUR:02d}:{BRIEFING_MINUTE:02d} AEST — WhatsApp broadcast</div>
+              <div style="font-size:.7rem;color:#64748b">{BRIEFING_HOUR:02d}:{BRIEFING_MINUTE:02d} AEST â€” WhatsApp broadcast</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;
@@ -3479,7 +3479,7 @@ def dashboard():
               <i class="bi bi-envelope-fill"></i></div>
             <div>
               <div style="font-size:.78rem;font-weight:700;color:#fff">Email Sync</div>
-              <div style="font-size:.7rem;color:#64748b">Every 15 min — Gmail IMAP</div>
+              <div style="font-size:.7rem;color:#64748b">Every 15 min â€” Gmail IMAP</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;
@@ -3489,7 +3489,7 @@ def dashboard():
               <i class="bi bi-calendar-check-fill"></i></div>
             <div>
               <div style="font-size:.78rem;font-weight:700;color:#fff">Weekly Summary</div>
-              <div style="font-size:.7rem;color:#64748b">Monday — market transactions</div>
+              <div style="font-size:.7rem;color:#64748b">Monday â€” market transactions</div>
             </div>
           </div>
         </div>
@@ -3528,7 +3528,7 @@ def dashboard():
     <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead><tr><th>Address</th><th>Type</th><th>Size</th><th>Price / Rent</th><th>Status</th><th></th></tr></thead>
-      <tbody>{prop_rows or '<tr><td colspan="6" style="text-align:center;color:#2d4a6b;padding:2rem">No properties yet — <a href="/upload" style="color:#f59e0b">import Excel</a></td></tr>'}</tbody>
+      <tbody>{prop_rows or '<tr><td colspan="6" style="text-align:center;color:#2d4a6b;padding:2rem">No properties yet â€” <a href="/upload" style="color:#f59e0b">import Excel</a></td></tr>'}</tbody>
     </table></div>
   </div>
 </div>
@@ -3572,14 +3572,14 @@ def properties_page():
         props = [p for p in props if search.lower() in (p.get("address") or "").lower()
                  or search.lower() in (p.get("suburb") or "").lower()]
     rows = "".join(f"""<tr>
-        <td class="fw-semibold">{p.get('address','—')}</td>
-        <td>{p.get('suburb','—')}</td>
-        <td>{p.get('property_type','—')}</td>
-        <td>{p.get('size_sqm','—')}</td>
+        <td class="fw-semibold">{p.get('address','â€”')}</td>
+        <td>{p.get('suburb','â€”')}</td>
+        <td>{p.get('property_type','â€”')}</td>
+        <td>{p.get('size_sqm','â€”')}</td>
         <td>{fmt_currency(p.get('asking_price'))}</td>
         <td>{fmt_currency(p.get('asking_rent_pa'))}</td>
-        <td>{status_badge(p.get('status','—'))}</td>
-        <td>{p.get('agent_name','—')}</td>
+        <td>{status_badge(p.get('status','â€”'))}</td>
+        <td>{p.get('agent_name','â€”')}</td>
         <td>{fmt_date(p.get('created_at'))}</td>
         <td>
           <a href="/properties/{p['id']}/edit" class="btn btn-sm btn-outline-secondary me-1">Edit</a>
@@ -3599,7 +3599,7 @@ def properties_page():
 <div class="card mb-3">
   <div class="card-body py-2">
     <form class="row g-2 align-items-center" method="GET" action="/properties">
-      <div class="col-auto"><input name="q" class="form-control form-control-sm" placeholder="Search address…" value="{search}"/></div>
+      <div class="col-auto"><input name="q" class="form-control form-control-sm" placeholder="Search addressâ€¦" value="{search}"/></div>
       <div class="col-auto">
         <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
           <option value="">All Status</option>
@@ -3750,12 +3750,12 @@ def edit_property(pid):
 def contacts_page():
     contacts = sb_select("contacts", order="created_at")
     rows = "".join(f"""<tr>
-        <td class="fw-semibold">{c.get('name','—')}</td>
-        <td>{c.get('company','—')}</td>
-        <td>{c.get('contact_type','—')}</td>
-        <td>{c.get('phone','—')}</td>
-        <td>{c.get('email','—')}</td>
-        <td>{'✅' if c.get('whatsapp_opt_in') else '—'}</td>
+        <td class="fw-semibold">{c.get('name','â€”')}</td>
+        <td>{c.get('company','â€”')}</td>
+        <td>{c.get('contact_type','â€”')}</td>
+        <td>{c.get('phone','â€”')}</td>
+        <td>{c.get('email','â€”')}</td>
+        <td>{'âœ…' if c.get('whatsapp_opt_in') else 'â€”'}</td>
         <td>{fmt_date(c.get('created_at'))}</td>
         <td><button class="btn btn-sm btn-outline-danger" onclick="deleteRow({c['id']},'contact')">Del</button></td>
     </tr>""" for c in contacts)
@@ -3829,13 +3829,13 @@ def inquiries_page():
     scored = sorted([dict(i, _score=score_lead(i)) for i in inquiries],
                     key=lambda x: x["_score"], reverse=True)
     rows = "".join(f"""<tr>
-        <td style="font-weight:700;color:#fff">{i.get('contact_name','—')}</td>
-        <td style="color:#64748b;font-size:.77rem">{i.get('contact_email','—')}</td>
-        <td style="color:#94a3b8">{i.get('contact_phone','—')}</td>
-        <td>{i.get('source','—')}</td>
+        <td style="font-weight:700;color:#fff">{i.get('contact_name','â€”')}</td>
+        <td style="color:#64748b;font-size:.77rem">{i.get('contact_email','â€”')}</td>
+        <td style="color:#94a3b8">{i.get('contact_phone','â€”')}</td>
+        <td>{i.get('source','â€”')}</td>
         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:.77rem">{(i.get('message') or '')[:60]}</td>
         <td>{urgency_badge(i['_score'])}</td>
-        <td>{status_badge(i.get('status','—'))}</td>
+        <td>{status_badge(i.get('status','â€”'))}</td>
         <td>{fmt_date(i.get('created_at'))}</td>
         <td>
           <button class="btn btn-xs btn-outline-secondary me-1" onclick="markDone({i['id']})">Done</button>
@@ -3907,12 +3907,12 @@ function markDone(id) {{
 def deals_page():
     deals = sb_select("deals", order="created_at")
     rows = "".join(f"""<tr>
-        <td>{d.get('deal_type','—')}</td>
+        <td>{d.get('deal_type','â€”')}</td>
         <td>{fmt_currency(d.get('price'))}</td>
-        <td>{d.get('buyer_name','—')}</td>
-        <td>{d.get('seller_name','—')}</td>
-        <td>{d.get('agent_name','—')}</td>
-        <td>{status_badge(d.get('status','—'))}</td>
+        <td>{d.get('buyer_name','â€”')}</td>
+        <td>{d.get('seller_name','â€”')}</td>
+        <td>{d.get('agent_name','â€”')}</td>
+        <td>{status_badge(d.get('status','â€”'))}</td>
         <td>{fmt_date(d.get('settlement_date'))}</td>
         <td>{fmt_date(d.get('created_at'))}</td>
         <td><button class="btn btn-sm btn-outline-danger" onclick="deleteDeal({d['id']})">Del</button></td>
@@ -3979,10 +3979,10 @@ function deleteDeal(id) {{
 def whatsapp_page():
     logs = sb_select("whatsapp_logs", order="created_at", limit=50)
     rows = "".join(f"""<tr>
-        <td><span class="badge {'bg-primary' if l.get('direction')=='Inbound' else 'bg-success'}">{l.get('direction','—')}</span></td>
-        <td>{l.get('from_number','—')}</td>
-        <td>{l.get('to_number','—')}</td>
-        <td style="max-width:300px" class="text-truncate">{l.get('body','—')[:100]}</td>
+        <td><span class="badge {'bg-primary' if l.get('direction')=='Inbound' else 'bg-success'}">{l.get('direction','â€”')}</span></td>
+        <td>{l.get('from_number','â€”')}</td>
+        <td>{l.get('to_number','â€”')}</td>
+        <td style="max-width:300px" class="text-truncate">{l.get('body','â€”')[:100]}</td>
         <td>{fmt_date(l.get('created_at'))}</td>
     </tr>""" for l in logs)
     broadcast_list = ", ".join(WA_BROADCAST_LIST) if WA_BROADCAST_LIST else "None configured"
@@ -4165,7 +4165,7 @@ def email_page():
 <div class="ph">
   <div>
     <h4>Email Inbox</h4>
-    <p>Priority-sorted inbox — Gmail IMAP + Android automation + Outlook</p>
+    <p>Priority-sorted inbox â€” Gmail IMAP + Android automation + Outlook</p>
   </div>
   <a href="/email-log/check" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-arrow-clockwise me-1"></i>Check Gmail Now</a>
@@ -4193,7 +4193,7 @@ def email_page():
     <div style="display:flex;gap:.5rem;align-items:center">
       <i class="bi bi-search" style="color:#64748b"></i>
       <input id="emailQuery" type="text" class="form-control form-control-sm"
-             placeholder="Ask: 'who haven't I responded to' · 'priorities today' · 'from John Smith' · 'overdue'"
+             placeholder="Ask: 'who haven't I responded to' Â· 'priorities today' Â· 'from John Smith' Â· 'overdue'"
              style="background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);color:#e2e8f0"
              onkeydown="if(event.key==='Enter')queryEmails()">
       <button class="btn btn-sm btn-primary" onclick="queryEmails()">Ask</button>
@@ -4219,7 +4219,7 @@ def email_page():
 <script>
 function markReplied(id, btn) {{
   btn.disabled = true;
-  btn.textContent = 'Saving…';
+  btn.textContent = 'Savingâ€¦';
   fetch('/api/email/' + id + '/replied', {{method:'PATCH', headers:{{'X-CSRFToken':''}}}})
     .then(r => r.json())
     .then(() => {{
@@ -4236,7 +4236,7 @@ function queryEmails() {{
   if (!q) return;
   const ans = document.getElementById('queryAnswer');
   ans.style.display = 'block';
-  ans.textContent = 'Searching…';
+  ans.textContent = 'Searchingâ€¦';
   fetch('/api/email/query', {{
     method: 'POST',
     headers: {{'Content-Type': 'application/json'}},
@@ -4308,7 +4308,7 @@ def android_email_webhook():
     ts      = data.get("timestamp") or data.get("date") or None
     source  = "android_" + (data.get("app") or "automation").lower().replace(" ", "_")
 
-    # Normalise timestamp — accept epoch millis, epoch seconds, or ISO string
+    # Normalise timestamp â€” accept epoch millis, epoch seconds, or ISO string
     received_at = None
     if ts:
         try:
@@ -4347,7 +4347,7 @@ def mark_email_replied(email_id):
         "flagged_unanswered": False,
     })
     if result is None:
-        return jsonify({"error": "Update failed — check server logs"}), 500
+        return jsonify({"error": "Update failed â€” check server logs"}), 500
     return jsonify({"status": "ok", "id": email_id})
 
 
@@ -4404,7 +4404,7 @@ def upload_page():
                     xls_result = process_excel_file(fpath)
                     flash(f"Excel import: {xls_result['imported']} properties added, {xls_result['skipped']} skipped.", "success")
                 else:
-                   import threading
+                    import threading
                     def _bg_process(fp, fn):
                         try:
                             process_file_universal(fp, fn)
@@ -4415,7 +4415,7 @@ def upload_page():
                             except OSError: pass
                     t = threading.Thread(target=_bg_process, args=(fpath, fname), daemon=True)
                     t.start()
-                    flash("⏳ File received — processing in background. Check Documents shortly.", "success") 
+                    flash("â³ File received â€” processing in background. Check Documents shortly.", "success") 
                     
             except Exception as e:
                 log.exception("upload error")
@@ -4424,7 +4424,7 @@ def upload_page():
                 try: os.remove(fpath)
                 except OSError: pass
 
-    # ── Build result panel ────────────────────────────────────────────────────
+    # â”€â”€ Build result panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     result_html = ""
     if ai_result:
         conf_pct = int((ai_result.get("ai_confidence") or 0) * 100)
@@ -4432,7 +4432,7 @@ def upload_page():
         counts   = ai_result.get("counts") or {}
         links    = ai_result.get("links") or {}
 
-        # Counts strip — only show non-zero
+        # Counts strip â€” only show non-zero
         count_labels = {
             "properties": ("bi-buildings-fill","#f59e0b","Properties"),
             "contacts":   ("bi-people-fill","#38bdf8","Contacts"),
@@ -4471,7 +4471,7 @@ def upload_page():
     <div class="row g-2 mb-2">
       <div class="col-6">
         <div style="color:#64748b;font-size:.7rem">Type Detected</div>
-        <div style="color:#f59e0b;font-weight:700">{(ai_result.get('ai_classification') or '—').replace('_',' ').title()}</div>
+        <div style="color:#f59e0b;font-weight:700">{(ai_result.get('ai_classification') or 'â€”').replace('_',' ').title()}</div>
       </div>
       <div class="col-6">
         <div style="color:#64748b;font-size:.7rem">Confidence</div>
@@ -4482,7 +4482,7 @@ def upload_page():
     {f'<div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.6rem">{count_chips}</div>' if count_chips else ''}
     {f'<div style="margin-bottom:.4rem"><span style="color:#64748b;font-size:.68rem">Companies: </span>{company_chips}</div>' if company_chips else ''}
     {link_line}
-    {'<div style="color:#64748b;font-size:.7rem;margin-top:.4rem"><i class="bi bi-vector-pen me-1"></i>Full text embedded — document is semantically searchable</div>' if ai_result.get('doc_id') else ''}
+    {'<div style="color:#64748b;font-size:.7rem;margin-top:.4rem"><i class="bi bi-vector-pen me-1"></i>Full text embedded â€” document is semantically searchable</div>' if ai_result.get('doc_id') else ''}
     <div class="d-flex gap-2 mt-2">
       <a href="/documents" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-file-earmark-text me-1"></i>Document Library</a>
@@ -4508,7 +4508,7 @@ def upload_page():
 <div class="ph">
   <div>
     <h4><i class="bi bi-cloud-arrow-up-fill me-2" style="color:#f59e0b"></i>AI Document Intake</h4>
-    <p>Upload any document — AI extracts, classifies, summarises and embeds it for search.</p>
+    <p>Upload any document â€” AI extracts, classifies, summarises and embeds it for search.</p>
   </div>
   <div>{ai_badge}</div>
 </div>
@@ -4545,7 +4545,7 @@ def upload_page():
           <div class="mt-2 text-center">
             <button type="button" class="btn btn-link btn-sm" style="font-size:.73rem;color:#475569"
                     onclick="switchToExcel()">
-              Upload .xlsx as properties spreadsheet instead →
+              Upload .xlsx as properties spreadsheet instead â†’
             </button>
           </div>
         </form>
@@ -4563,31 +4563,31 @@ def upload_page():
           <div style="display:flex;gap:.6rem;align-items:flex-start">
             <span style="min-width:28px;font-size:.7rem;font-weight:700;color:#f59e0b;padding-top:.1rem">REG</span>
             <div><strong style="color:#fff">Asset Register</strong>
-              <div style="color:#64748b;font-size:.72rem">→ properties (occupier, landlord, grade, lease_expiry), contacts</div>
+              <div style="color:#64748b;font-size:.72rem">â†’ properties (occupier, landlord, grade, lease_expiry), contacts</div>
             </div>
           </div>
           <div style="display:flex;gap:.6rem;align-items:flex-start">
             <span style="min-width:28px;font-size:.7rem;font-weight:700;color:#10b981;padding-top:.1rem">VAC</span>
             <div><strong style="color:#fff">Vacancy Schedule</strong>
-              <div style="color:#64748b;font-size:.72rem">→ vacancies (available_date, vacating_tenant, owner, agent), properties</div>
+              <div style="color:#64748b;font-size:.72rem">â†’ vacancies (available_date, vacating_tenant, owner, agent), properties</div>
             </div>
           </div>
           <div style="display:flex;gap:.6rem;align-items:flex-start">
             <span style="min-width:28px;font-size:.7rem;font-weight:700;color:#fb923c;padding-top:.1rem">REQ</span>
             <div><strong style="color:#fff">Requirements / Listing</strong>
-              <div style="color:#64748b;font-size:.72rem">→ requirements (company, size range, location, rating), contacts</div>
+              <div style="color:#64748b;font-size:.72rem">â†’ requirements (company, size range, location, rating), contacts</div>
             </div>
           </div>
           <div style="display:flex;gap:.6rem;align-items:flex-start">
             <span style="min-width:28px;font-size:.7rem;font-weight:700;color:#c084fc;padding-top:.1rem">DEL</span>
             <div><strong style="color:#fff">Deal Tracker</strong>
-              <div style="color:#64748b;font-size:.72rem">→ deals (tenant, address, size, rent, term, landlord), contacts</div>
+              <div style="color:#64748b;font-size:.72rem">â†’ deals (tenant, address, size, rent, term, landlord), contacts</div>
             </div>
           </div>
           <div style="display:flex;gap:.6rem;align-items:flex-start">
             <span style="min-width:28px;font-size:.7rem;font-weight:700;color:#a78bfa;padding-top:.1rem">LSE</span>
             <div><strong style="color:#fff">Executed Lease / Contract</strong>
-              <div style="color:#64748b;font-size:.72rem">→ market_data (all lease terms as evidence), deals (Completed)</div>
+              <div style="color:#64748b;font-size:.72rem">â†’ market_data (all lease terms as evidence), deals (Completed)</div>
             </div>
           </div>
           <div style="display:flex;gap:.6rem;align-items:flex-start;border-top:1px solid rgba(255,255,255,.05);padding-top:.5rem">
@@ -4621,7 +4621,7 @@ const fileNameEl = document.getElementById('fileName');
 fileInput.addEventListener('change', function() {{
   if (this.files.length > 0) {{
     const file = this.files[0];
-    fileNameEl.textContent = '⏳ Processing ' + file.name + '...';
+    fileNameEl.textContent = 'â³ Processing ' + file.name + '...';
     submitBtn.disabled = true;
     const fd = new FormData();
     fd.append('file', file);
@@ -4629,11 +4629,11 @@ fileInput.addEventListener('change', function() {{
     fetch('/upload', {{method:'POST', body:fd}})
       .then(r => r.text())
       .then(() => {{
-        fileNameEl.innerHTML = '✅ <strong>' + file.name + '</strong> done! <a href="/documents" style="color:#f59e0b">View documents</a>';
+        fileNameEl.innerHTML = 'âœ… <strong>' + file.name + '</strong> done! <a href="/documents" style="color:#f59e0b">View documents</a>';
         fileInput.value = '';
       }})
       .catch(() => {{
-        fileNameEl.textContent = '❌ Failed - try again';
+        fileNameEl.textContent = 'âŒ Failed - try again';
         submitBtn.disabled = false;
       }});
   }}
@@ -4661,7 +4661,7 @@ function switchToExcel() {{
 </script>"""
     return render_layout(content, "AI Intake", "upload")
 
-# ── Documents library ─────────────────────────────────────────────────────────
+# â”€â”€ Documents library â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/documents")
 @login_required
 def documents_page():
@@ -4770,7 +4770,7 @@ def documents_page():
 <div class="col-12">
   <div style="text-align:center;padding:4rem 1rem;color:#1e3a5f">
     <i class="bi bi-file-earmark-plus" style="font-size:2.5rem;opacity:.4;display:block;margin-bottom:.8rem"></i>
-    No documents yet — <a href="/upload" style="color:#f59e0b">upload your first file</a>
+    No documents yet â€” <a href="/upload" style="color:#f59e0b">upload your first file</a>
   </div>
 </div>"""
 
@@ -4795,7 +4795,7 @@ def documents_page():
     return render_layout(content, "Documents", "documents")
 
 
-# ── Semantic search ───────────────────────────────────────────────────────────
+# â”€â”€ Semantic search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/search")
 @login_required
 def search_page():
@@ -4805,7 +4805,7 @@ def search_page():
 
     if q:
         if not OPENAI_API_KEY:
-            error = "OpenAI API key not configured — semantic search unavailable."
+            error = "OpenAI API key not configured â€” semantic search unavailable."
         else:
             try:
                 results = semantic_search(q, top_k=12)
@@ -4861,7 +4861,7 @@ def search_page():
 <div class="ph">
   <div>
     <h4><i class="bi bi-search-heart-fill me-2" style="color:#f59e0b"></i>Semantic Search</h4>
-    <p>Search documents by meaning — not just keywords. {ai_status}</p>
+    <p>Search documents by meaning â€” not just keywords. {ai_status}</p>
   </div>
 </div>
 
@@ -4869,7 +4869,7 @@ def search_page():
   <div class="card-body" style="padding:1.1rem">
     <form method="GET" action="/search">
       <div class="d-flex gap-2">
-        <input type="text" name="q" class="form-control" placeholder='e.g. "warehouse lease Sunshine" or "buyer looking for 2000sqm"…'
+        <input type="text" name="q" class="form-control" placeholder='e.g. "warehouse lease Sunshine" or "buyer looking for 2000sqm"â€¦'
                value="{q}" autofocus style="font-size:.88rem"/>
         <button type="submit" class="btn btn-primary px-4">
           <i class="bi bi-search me-1"></i>Search
@@ -4905,14 +4905,14 @@ def search_page():
     <div class="card-body" style="padding:.85rem">
       <div style="color:#c084fc;font-size:.8rem;font-weight:700;margin-bottom:.3rem">
         <i class="bi bi-lightbulb-fill me-1"></i>Best results</div>
-      <div style="color:#64748b;font-size:.73rem">Use natural language — describe what you are looking for. More documents uploaded = better coverage.</div>
+      <div style="color:#64748b;font-size:.73rem">Use natural language â€” describe what you are looking for. More documents uploaded = better coverage.</div>
     </div>
   </div>
   <div class="card" style="border-color:rgba(16,185,129,.15)">
     <div class="card-body" style="padding:.85rem">
       <div style="color:#10b981;font-size:.8rem;font-weight:700;margin-bottom:.3rem">
         <i class="bi bi-file-earmark-plus me-1"></i>Add more docs</div>
-      <div style="color:#64748b;font-size:.73rem">Upload leases, inspection reports, market data, emails — anything relevant to West Melbourne industrial.</div>
+      <div style="color:#64748b;font-size:.73rem">Upload leases, inspection reports, market data, emails â€” anything relevant to West Melbourne industrial.</div>
     </div>
   </div>
 </div>'''}
@@ -4925,8 +4925,8 @@ def search_page():
 def briefings_page():
     briefs = sb_select("briefings", order="created_at", limit=20)
     rows = "".join(f"""<tr>
-        <td><span class="badge bg-secondary">{b.get('briefing_type','—')}</span></td>
-        <td>{b.get('channel','—')}</td>
+        <td><span class="badge bg-secondary">{b.get('briefing_type','â€”')}</span></td>
+        <td>{b.get('channel','â€”')}</td>
         <td class="text-truncate" style="max-width:350px">{(b.get('content') or '')[:100]}</td>
         <td>{fmt_date(b.get('created_at'))}</td>
         <td>
@@ -4946,7 +4946,7 @@ def briefings_page():
 </div>
 <div class="alert alert-info mb-3" style="font-size:.84rem">
   <i class="bi bi-clock me-1"></i>
-  Daily briefing scheduled at <strong>{BRIEFING_HOUR:02d}:{BRIEFING_MINUTE:02d} {TIMEZONE}</strong> —
+  Daily briefing scheduled at <strong>{BRIEFING_HOUR:02d}:{BRIEFING_MINUTE:02d} {TIMEZONE}</strong> â€”
   Weekly briefing every Monday.
   Gmail checked every <strong>15 minutes</strong>.
 </div>
@@ -5008,7 +5008,7 @@ def analytics_page():
     fees    = sb_select("fees",     order="created_at", limit=500)
     all_inq = sb_select("inquiries", order="created_at", limit=500)
 
-    # ── Property breakdown ────────────────────────────────────────────────────
+    # â”€â”€ Property breakdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     by_type, by_status, size_data = {}, {}, []
     for p in props:
         t = p.get("property_type") or "Other"
@@ -5019,7 +5019,7 @@ def analytics_page():
         except (TypeError, ValueError, KeyError): pass
     avg_size = round(sum(size_data)/len(size_data), 0) if size_data else 0
 
-    # ── Fee pipeline by month ──────────────────────────────────────────────────
+    # â”€â”€ Fee pipeline by month â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     fee_by_month   = defaultdict(float)
     fee_by_landlord = defaultdict(float)
     total_fees = paid_fees = 0.0
@@ -5047,7 +5047,7 @@ def analytics_page():
     ll_labels = [x[0][:22] for x in top_landlords]
     ll_values = [round(x[1], 0) for x in top_landlords]
 
-    # ── Deals by suburb ────────────────────────────────────────────────────────
+    # â”€â”€ Deals by suburb â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     deals_by_suburb = defaultdict(int)
     deals_by_type   = defaultdict(int)
     deals_by_month  = defaultdict(int)
@@ -5062,7 +5062,7 @@ def analytics_page():
     sub_labels  = [x[0][:20] for x in top_suburbs]
     sub_values  = [x[1]      for x in top_suburbs]
 
-    # ── Inquiry source breakdown ───────────────────────────────────────────────
+    # â”€â”€ Inquiry source breakdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     inq_by_source = defaultdict(int)
     for i in all_inq:
         inq_by_source[i.get("source") or "Web"] += 1
@@ -5077,7 +5077,7 @@ def analytics_page():
     kpi_deals   = len(deals)
 
     content = f"""
-<div class="ph"><div><h4>Analytics</h4><p>Live market intelligence — {kpi_total} properties, {kpi_deals} deals, ${total_fees:,.0f} total fees</p></div></div>
+<div class="ph"><div><h4>Analytics</h4><p>Live market intelligence â€” {kpi_total} properties, {kpi_deals} deals, ${total_fees:,.0f} total fees</p></div></div>
 
 <!-- KPI row -->
 <div class="row g-3 mb-4">
@@ -5246,7 +5246,7 @@ def settings_page():
     job_rows = "".join(f"""<tr>
         <td class="fw-semibold">{j.id}</td>
         <td><code>{j.trigger}</code></td>
-        <td>{str(j.next_run_time)[:19] if j.next_run_time else '—'}</td>
+        <td>{str(j.next_run_time)[:19] if j.next_run_time else 'â€”'}</td>
         <td><span class="badge bg-success">Active</span></td>
     </tr>""" for j in jobs)
     content = f"""
@@ -5305,7 +5305,7 @@ TIMEZONE=Australia/Melbourne</pre>
 </div>"""
     return render_layout(content, "Settings", "settings")
 
-# ── API routes ─────────────────────────────────────────────────────────────────
+# â”€â”€ API routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/api/properties", methods=["POST"])
 @login_required
 def api_add_property():
@@ -5395,15 +5395,15 @@ def api_send_whatsapp():
             flash("Recipient number is required.", "error")
             return redirect(url_for("whatsapp_page"))
         ok = send_whatsapp(to, body)
-        flash("Message sent." if ok else "Failed to send — check Twilio config.", "success" if ok else "error")
+        flash("Message sent." if ok else "Failed to send â€” check Twilio config.", "success" if ok else "error")
     return redirect(url_for("whatsapp_page"))
 
-# ── Webhooks ──────────────────────────────────────────────────────────────────
+# â”€â”€ Webhooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/webhook/whatsapp", methods=["POST"])
 def webhook_whatsapp():
     from_num = request.form.get("From", "")
     body     = request.form.get("Body", "").strip()
-    log.info("WhatsApp inbound: %s — %s", from_num, body[:80])
+    log.info("WhatsApp inbound: %s â€” %s", from_num, body[:80])
     reply = handle_inbound_whatsapp(from_num, body)
     resp = MessagingResponse()
     resp.message(reply)
@@ -5413,10 +5413,10 @@ def webhook_whatsapp():
 def webhook_whatsapp_status():
     sid    = request.form.get("MessageSid", "")
     status = request.form.get("MessageStatus", "")
-    log.info("WA status callback: %s → %s", sid, status)
+    log.info("WA status callback: %s â†’ %s", sid, status)
     return "", 204
 
-# ── Outlook add-in ────────────────────────────────────────────────────────────
+# â”€â”€ Outlook add-in â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/outlook-manifest.xml")
 def outlook_manifest():
     base_url = get_base_url()
@@ -5479,7 +5479,7 @@ def outlook_setup():
 <div class="row g-3">
   <div class="col-lg-6">
     <div class="card">
-      <div class="card-header"><i class="bi bi-plug-fill me-1" style="color:#38bdf8"></i>Option 1 — Install Add-in</div>
+      <div class="card-header"><i class="bi bi-plug-fill me-1" style="color:#38bdf8"></i>Option 1 â€” Install Add-in</div>
       <div class="card-body" style="font-size:.82rem">
         <p style="color:#94a3b8">Adds a "MJR West Agent" button to every email you read in Outlook.</p>
         <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);
@@ -5488,10 +5488,10 @@ def outlook_setup():
           <code style="color:#f59e0b;font-size:.75rem;word-break:break-all">{manifest_url}</code>
         </div>
         <ol style="color:#94a3b8;font-size:.78rem;padding-left:1.2rem;line-height:1.9">
-          <li>Open Outlook → <strong style="color:#fff">File → Manage Add-ins</strong> (or Admin Center)</li>
-          <li>Click <strong style="color:#fff">+ Add a custom add-in → From URL</strong></li>
+          <li>Open Outlook â†’ <strong style="color:#fff">File â†’ Manage Add-ins</strong> (or Admin Center)</li>
+          <li>Click <strong style="color:#fff">+ Add a custom add-in â†’ From URL</strong></li>
           <li>Paste the manifest URL above</li>
-          <li>Open any email → the <strong style="color:#fff">MJR West Agent</strong> button appears in the ribbon</li>
+          <li>Open any email â†’ the <strong style="color:#fff">MJR West Agent</strong> button appears in the ribbon</li>
           <li>Click it to send the email to this system</li>
         </ol>
         <div style="background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.1);
@@ -5505,7 +5505,7 @@ def outlook_setup():
   </div>
   <div class="col-lg-6">
     <div class="card mb-3">
-      <div class="card-header"><i class="bi bi-forward-fill me-1" style="color:#10b981"></i>Option 2 — BCC Forwarding</div>
+      <div class="card-header"><i class="bi bi-forward-fill me-1" style="color:#10b981"></i>Option 2 â€” BCC Forwarding</div>
       <div class="card-body" style="font-size:.82rem">
         <p style="color:#94a3b8">Simpler: just BCC any property email to the agent address. The Gmail IMAP monitor processes it automatically.</p>
         <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);
@@ -5537,7 +5537,7 @@ def outlook_setup():
     return render_layout(content, "Outlook Setup", "outlook")
 
 
-# ── Call Logs ─────────────────────────────────────────────────────────────────
+# â”€â”€ Call Logs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/call-logs", methods=["GET", "POST"])
 @login_required
 def call_logs_page():
@@ -5566,14 +5566,14 @@ def call_logs_page():
     rows_html = ""
     for cl in logs:
         dur = cl.get("duration_sec") or 0
-        dur_str = f"{dur//60}:{dur%60:02d}" if dur else "—"
+        dur_str = f"{dur//60}:{dur%60:02d}" if dur else "â€”"
         direction = cl.get("direction","")
         dir_col = {"Incoming":"#10b981","Outgoing":"#38bdf8","Missed":"#ef4444"}.get(direction,"#64748b")
         rows_html += f"""<tr>
           <td style="color:#fff">{fmt_date(cl.get('call_date'))}</td>
           <td style="color:{dir_col}">{direction}</td>
-          <td style="color:#fff">{cl.get('contact_name') or '—'}</td>
-          <td style="color:#94a3b8">{cl.get('number','—')}</td>
+          <td style="color:#fff">{cl.get('contact_name') or 'â€”'}</td>
+          <td style="color:#94a3b8">{cl.get('number','â€”')}</td>
           <td style="color:#64748b">{dur_str}</td>
           <td style="color:#475569;font-size:.72rem">{cl.get('source_file','')[:20]}</td>
         </tr>"""
@@ -5640,7 +5640,7 @@ def call_logs_page():
     return render_layout(content, "Call Logs", "calllogs")
 
 
-# ── Call Recordings ───────────────────────────────────────────────────────────
+# â”€â”€ Call Recordings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/recordings", methods=["GET", "POST"])
 @login_required
 def recordings_page():
@@ -5745,11 +5745,11 @@ def recordings_page():
             except Exception: actions = []
         rec_rows += f"""<tr>
           <td style="color:#fff;font-size:.78rem">{r.get('filename','')[:35]}</td>
-          <td style="color:#f59e0b">{r.get('contact_name') or '—'}</td>
+          <td style="color:#f59e0b">{r.get('contact_name') or 'â€”'}</td>
           <td style="color:#94a3b8;font-size:.74rem;max-width:300px;white-space:nowrap;
               overflow:hidden;text-overflow:ellipsis">{r.get('ai_summary','')[:80]}</td>
           <td style="color:#64748b;font-size:.7rem">{len(actions)} items</td>
-          <td style="color:#475569;font-size:.7rem">{'Yes' if r.get('style_learned') else '—'}</td>
+          <td style="color:#475569;font-size:.7rem">{'Yes' if r.get('style_learned') else 'â€”'}</td>
           <td>{fmt_date(r.get('created_at'))}</td>
         </tr>"""
     if not rec_rows:
@@ -5813,7 +5813,7 @@ def recordings_page():
     return render_layout(content, "Recordings", "recordings")
 
 
-# ── Calendar ──────────────────────────────────────────────────────────────────
+# â”€â”€ Calendar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/calendar", methods=["GET", "POST"])
 @login_required
 def calendar_page():
@@ -5824,7 +5824,7 @@ def calendar_page():
             note = request.form.get("notes","")
             if eid:
                 sb_update("calendar_events", {"id": int(eid)}, {"post_meeting_notes": note})
-                flash("Post-meeting notes saved. AI processing in background…", "success")
+                flash("Post-meeting notes saved. AI processing in backgroundâ€¦", "success")
                 # Fetch the event and run AI processing in background thread
                 evs = sb_select("calendar_events", {"id": int(eid)})
                 if evs and note.strip():
@@ -5875,7 +5875,7 @@ def calendar_page():
         return (f'<tr>'
                 f'<td style="color:#fff;font-size:.78rem">{e.get("title","")[:50]}</td>'
                 f'<td style="color:#64748b;font-size:.74rem">{(e.get("start_dt") or "")[:16].replace("T"," ")}</td>'
-                f'<td style="color:#94a3b8;font-size:.74rem">{e.get("location","")[:30] or "—"}</td>'
+                f'<td style="color:#94a3b8;font-size:.74rem">{e.get("location","")[:30] or "â€”"}</td>'
                 f'<td>{prop_badge}{brief_badge}</td>'
                 f'<td style="color:#475569;font-size:.7rem">{notes_snippet}</td>'
                 f'<td style="white-space:nowrap">'
@@ -5908,7 +5908,7 @@ def calendar_page():
             <i class="bi bi-upload me-1"></i>Import Calendar</button>
         </form>
         <div style="font-size:.72rem;color:#475569;margin-top:.8rem">
-          In Outlook: File → Open &amp; Export → Import/Export → Export to .ics
+          In Outlook: File â†’ Open &amp; Export â†’ Import/Export â†’ Export to .ics
         </div>
       </div>
     </div>
@@ -5962,7 +5962,7 @@ def calendar_page():
       <input type="hidden" name="event_id" id="notesEventId"/>
       <textarea name="notes" id="notesTextarea" class="form-control mb-2" rows="6"
                 style="background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);color:#e2e8f0"
-                placeholder="Key outcomes, follow-ups, observations… GPT-4o will extract action items and draft a follow-up email automatically."></textarea>
+                placeholder="Key outcomes, follow-ups, observationsâ€¦ GPT-4o will extract action items and draft a follow-up email automatically."></textarea>
       <div style="font-size:.7rem;color:#475569;margin-bottom:.75rem">
         <i class="bi bi-robot me-1"></i>GPT-4o will auto-extract action items, update the contact record, and draft a follow-up email.
       </div>
@@ -6004,7 +6004,7 @@ function viewAiResults(id) {{
       if (d.summary) html += '<p style="color:#94a3b8">' + d.summary + '</p>';
       if (d.action_items && d.action_items.length) {{
         html += '<div style="margin-bottom:.75rem"><div style="color:#f59e0b;font-weight:600;margin-bottom:.3rem">Action Items</div>';
-        d.action_items.forEach(a => {{ html += '<div style="color:#e2e8f0;padding:.2rem 0">• ' + a + '</div>'; }});
+        d.action_items.forEach(a => {{ html += '<div style="color:#e2e8f0;padding:.2rem 0">â€¢ ' + a + '</div>'; }});
         html += '</div>';
       }}
       if (d.follow_up_draft) {{
@@ -6021,7 +6021,7 @@ function viewAiResults(id) {{
     return render_layout(content, "Calendar", "calendar")
 
 
-# ── Fee Tracking ──────────────────────────────────────────────────────────────
+# â”€â”€ Fee Tracking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/fees", methods=["GET", "POST"])
 @login_required
 def fees_page():
@@ -6046,7 +6046,7 @@ def fees_page():
             f.save(fpath)
             try:
                 result = process_file_universal(fpath, fname)
-                flash(f"Fee forecast processed via AI intake — {result.get('ai_classification','')} detected.", "success")
+                flash(f"Fee forecast processed via AI intake â€” {result.get('ai_classification','')} detected.", "success")
             except Exception as e:
                 flash(f"Error: {e}", "error")
             finally:
@@ -6095,28 +6095,28 @@ def fees_page():
         status = f.get("invoice_status","Pending")
         st_col = {"Paid":"#10b981","Pending":"#f59e0b","Overdue":"#ef4444"}.get(status,"#64748b")
         fee_rows += (f'<tr>'
-                     f'<td style="color:#fff">{f.get("client_name","—")}</td>'
-                     f'<td style="color:#94a3b8">{f.get("deal_type","—")}</td>'
+                     f'<td style="color:#fff">{f.get("client_name","â€”")}</td>'
+                     f'<td style="color:#94a3b8">{f.get("deal_type","â€”")}</td>'
                      f'<td style="color:#f59e0b">${float(f.get("fee_amount") or 0):,.0f}</td>'
                      f'<td><span style="color:{st_col};font-size:.74rem">{status}</span></td>'
                      f'<td style="color:#475569;font-size:.7rem">{fmt_date(f.get("created_at"))}</td>'
                      f'</tr>')
     if not fee_rows:
-        fee_rows = '<tr><td colspan="5" style="text-align:center;color:#1e3a5f;padding:2rem">No fees yet — calculate from a closed deal below</td></tr>'
+        fee_rows = '<tr><td colspan="5" style="text-align:center;color:#1e3a5f;padding:2rem">No fees yet â€” calculate from a closed deal below</td></tr>'
 
     deal_options = "".join(
-        f'<option value="{d["id"]}">{d.get("address") or d.get("tenant_name","Deal "+str(d["id"]))} — {d.get("deal_type","")}</option>'
+        f'<option value="{d["id"]}">{d.get("address") or d.get("tenant_name","Deal "+str(d["id"]))} â€” {d.get("deal_type","")}</option>'
         for d in deals_closed
     )
 
     schedule_rows = "".join(
         f'<tr><td style="color:#fff">{s.get("client_name","")}</td>'
         f'<td style="color:#64748b">{s.get("deal_type","")}</td>'
-        f'<td style="color:#f59e0b">{s.get("fee_pct") or "—"}%</td>'
+        f'<td style="color:#f59e0b">{s.get("fee_pct") or "â€”"}%</td>'
         f'<td style="color:#94a3b8">${float(s.get("flat_fee") or 0):,.0f}</td>'
         f'<td style="color:#94a3b8">${float(s.get("min_fee") or 0):,.0f}</td></tr>'
         for s in schedules
-    ) or '<tr><td colspan="5" style="text-align:center;color:#1e3a5f;padding:1rem">No schedules — upload one below</td></tr>'
+    ) or '<tr><td colspan="5" style="text-align:center;color:#1e3a5f;padding:1rem">No schedules â€” upload one below</td></tr>'
 
     content = f"""
 <div class="ph">
@@ -6155,7 +6155,7 @@ def fees_page():
           <div class="mb-3">
             <label class="form-label" style="font-size:.8rem">Closed Deal</label>
             <select name="deal_id" class="form-select form-select-sm">
-              <option value="">— Select deal —</option>{deal_options}
+              <option value="">â€” Select deal â€”</option>{deal_options}
             </select>
           </div>
           <button class="btn btn-primary w-100 btn-sm">
@@ -6225,7 +6225,7 @@ def fees_page():
     return render_layout(content, "Fee Tracking", "fees")
 
 
-# ── Landlord Portfolio ─────────────────────────────────────────────────────────
+# â”€â”€ Landlord Portfolio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/landlords")
 @login_required
 def landlords_page():
@@ -6245,9 +6245,9 @@ def landlords_page():
                     f'border-bottom:1px solid rgba(255,255,255,.04)">'
                     f'<div style="flex:1;min-width:0">'
                     f'<div style="font-size:.76rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
-                    f'{pr.get("address","—")}</div>'
+                    f'{pr.get("address","â€”")}</div>'
                     f'<div style="font-size:.68rem;color:#475569">'
-                    f'{pr.get("occupier") or "Vacant"} &bull; {pr.get("size_sqm","—")} sqm</div>'
+                    f'{pr.get("occupier") or "Vacant"} &bull; {pr.get("size_sqm","â€”")} sqm</div>'
                     f'</div>'
                     f'<div style="text-align:right;flex-shrink:0">{exp_html}</div></div>')
         prop_items = "".join(_prop_row(pr) for pr in p["properties"][:6])
@@ -6261,7 +6261,7 @@ def landlords_page():
             for ex in sorted(p["expiring_soon"], key=lambda x: x["months_away"]):
                 urgency = "#ef4444" if ex["months_away"] < 3 else "#f59e0b"
                 expiring_html += (f'<div style="font-size:.7rem;color:{urgency};padding:.15rem 0">'
-                                  f'{ex["address"][:35]} — {ex["occupier"] or "?"} '
+                                  f'{ex["address"][:35]} â€” {ex["occupier"] or "?"} '
                                   f'({ex["months_away"]}mo)</div>')
             expiring_html += '</div>'
 
@@ -6301,7 +6301,7 @@ def landlords_page():
     if not cards:
         cards = """<div class="col-12"><div style="text-align:center;padding:4rem 1rem;color:#1e3a5f">
           <i class="bi bi-buildings" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.8rem"></i>
-          No landlord data yet — upload an asset register via
+          No landlord data yet â€” upload an asset register via
           <a href="/upload" style="color:#f59e0b">AI Intake</a>
         </div></div>"""
 
@@ -6333,7 +6333,7 @@ def email_draft_page():
     if request.method == "POST" and form_prompt.strip():
         client = get_openai()
         if not client:
-            error = "OpenAI API key not configured — add OPENAI_API_KEY to .env"
+            error = "OpenAI API key not configured â€” add OPENAI_API_KEY to .env"
         else:
             style_ctx = get_style_context(n=5)
             system_msg = (
@@ -6368,7 +6368,7 @@ def email_draft_page():
 <div class="ph">
   <div>
     <h4><i class="bi bi-pencil-square me-2" style="color:#f59e0b"></i>Email Drafter</h4>
-    <p>Write emails in your voice — style learned from {style_count} call recording{'s' if style_count!=1 else ''}.</p>
+    <p>Write emails in your voice â€” style learned from {style_count} call recording{'s' if style_count!=1 else ''}.</p>
   </div>
 </div>
 
@@ -6403,7 +6403,7 @@ def email_draft_page():
           </button>
         </form>
 
-        {'<div style="margin-top:1.2rem"><div style="font-size:.72rem;color:#64748b;margin-bottom:.5rem">Style profile — recent phrases:</div>' + "".join(
+        {'<div style="margin-top:1.2rem"><div style="font-size:.72rem;color:#64748b;margin-bottom:.5rem">Style profile â€” recent phrases:</div>' + "".join(
             '<div style="font-size:.7rem;color:#475569;padding:.2rem 0">'
             + "".join('<span style="background:rgba(245,158,11,.1);color:#f59e0b;border-radius:4px;padding:.1rem .35rem;margin:.1rem;display:inline-block;font-size:.67rem">' + ph + '</span>'
                       for ph in (json.loads(s.get("key_phrases","[]")) if isinstance(s.get("key_phrases"), str) else (s.get("key_phrases") or []))[:4])
@@ -6424,7 +6424,7 @@ def email_draft_page():
         {'<pre id="draftText" style="white-space:pre-wrap;font-size:.8rem;color:#e2e8f0;background:rgba(255,255,255,.03);padding:1rem;border-radius:8px;min-height:300px;border:1px solid rgba(255,255,255,.06)">' + draft + '</pre>' if draft else
          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;color:#334155">'
          '<i class="bi bi-pencil-square" style="font-size:2.5rem;margin-bottom:.75rem;opacity:.25"></i>'
-         '<div style="font-size:.82rem">Describe what to write in the form →</div>'
+         '<div style="font-size:.82rem">Describe what to write in the form â†’</div>'
          '</div>'}
       </div>
     </div>
@@ -6454,7 +6454,7 @@ def health():
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
 
-# ── Entry point ────────────────────────────────────────────────────────────────
+# â”€â”€ Entry point â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if __name__ == "__main__":
     init_schema()
     if not scheduler.running:
@@ -6464,3 +6464,4 @@ if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     log.info("Starting West Melbourne Industrial Property Agent on port %d", port)
     app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=False)
+
