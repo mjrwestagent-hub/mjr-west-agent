@@ -169,7 +169,8 @@ def init_schema():
 # ── OpenAI ────────────────────────────────────────────────────────────────────
 def gpt(system, user, max_tokens=2000):
     try:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        import httpx
+        client = openai.OpenAI(api_key=OPENAI_API_KEY, http_client=httpx.Client())
         r = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[{"role":"system","content":system},{"role":"user","content":user}],
@@ -182,7 +183,8 @@ def gpt(system, user, max_tokens=2000):
 
 def embed(text):
     try:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        import httpx
+        client = openai.OpenAI(api_key=OPENAI_API_KEY, http_client=httpx.Client())
         r = client.embeddings.create(model=EMBED_MODEL, input=text[:8000])
         return r.data[0].embedding
     except Exception as e:
