@@ -151,6 +151,9 @@ def init_schema():
         ("call_logs", """id bigserial primary key, contact_name text, phone text,
          direction text default 'Inbound', duration_secs int, notes text,
          ai_summary text, created_at timestamptz default now()"""),
+        ("quotes", """id bigserial primary key, client text, property_address text,
+         quoted_rent_pa numeric, deal_type text default \'Lease\', notes text,
+         status text default \'Draft\', created_at timestamptz default now()"""),
         ("fees", """id bigserial primary key, deal_id bigint, amount numeric,
          invoice_status text default 'Pending', invoice_date date, paid_date date,
          notes text, created_at timestamptz default now()"""),
@@ -393,6 +396,7 @@ NAV = [
     ("market_data_page","bi-graph-up","Market Data"),
     ("fees_page","bi-cash-coin","Fees"),
     ("briefings_page","bi-broadcast","Briefings"),
+    ("quotes_page","bi-file-text","Quotes"),
     ("whatsapp_page","bi-whatsapp","WhatsApp"),
     ("settings_page","bi-gear","Settings"),
 ]
@@ -498,13 +502,16 @@ def dashboard():
     dc = len(sb_select("deals"))
     vacs = sb_select("vacancies",{"status":"eq.Available"},limit=5)
     reqs = sb_select("requirements",{"status":"eq.Active"},limit=5)
-    docs = sb_select("documents",limit=5)
     leads = sb_select("inquiries",{"status":"eq.New"},limit=5)
+    calls = sb_select("call_logs",order="created_at",limit=5)
+    today = datetime.now().strftime("%Y-%m-%d")
+    emails = sb_select("email_logs",{"requires_action":"eq.true"},limit=5)
 
-    vrow = "".join(f"<tr><td>{v.get('address','?')}</td><td>{v.get('size_sqm','?')} sqm</td><td>{fc(v.get('asking_rent_pa'))}</td></tr>" for v in vacs) or "<tr><td colspan=3 class='text-muted p-3 text-center'>No vacancies yet</td></tr>"
-    rrow = "".join(f"<tr><td>{r.get('company','?')}</td><td>{r.get('size_min','?')}-{r.get('size_max','?')} sqm</td><td>{fc(r.get('budget_pa'))}</td></tr>" for r in reqs) or "<tr><td colspan=3 class='text-muted p-3 text-center'>No requirements yet</td></tr>"
-    drow = "".join(f"<tr><td>{d.get('filename','?')}</td><td><span class='badge bg-secondary'>{d.get('ai_classification','?')}</span></td><td>{fd(d.get('created_at'))}</td></tr>" for d in docs) or "<tr><td colspan=3 class='text-muted p-3 text-center'>No documents yet</td></tr>"
-    lrow = "".join(f"<tr><td>{i.get('company','?')}</td><td>{i.get('source','?')}</td><td>{sbadge(i.get('status'))}</td></tr>" for i in leads) or "<tr><td colspan=3 class='text-muted p-3 text-center'>No new leads</td></tr>"
+    vrow = "".join(f"<tr><td>{v.get('address','?')}</td><td>{v.get('size_sqm','?')} sqm</td><td>{fc(v.get('asking_rent_pa'))}</td></tr>" for v in vacs) or "<tr><td colspan=3 class=\'text-muted p-3 text-center\'>No vacancies yet</td></tr>"
+    rrow = "".join(f"<tr><td>{r.get('company','?')}</td><td>{r.get('size_min','?')}-{r.get('size_max','?')} sqm</td><td>{fc(r.get('budget_pa'))}</td></tr>" for r in reqs) or "<tr><td colspan=3 class=\'text-muted p-3 text-center\'>No requirements yet</td></tr>"
+    lrow = "".join(f"<tr><td>{i.get('company','?')}</td><td>{i.get('source','?')}</td><td>{sbadge(i.get('status'))}</td></tr>" for i in leads) or "<tr><td colspan=3 class=\'text-muted p-3 text-center\'>No new leads</td></tr>"
+    crow = "".join(f"<tr><td>{c.get('contact_name','?')}</td><td>{c.get('direction','?')}</td><td>{c.get('duration_secs','?')}s</td><td class=\'text-muted small\'>{(c.get('ai_summary') or '')[:40]}</td></tr>" for c in calls) or "<tr><td colspan=4 class=\'text-muted p-3 text-center\'>No calls today</td></tr>"
+    arow = "".join(f"<tr><td>{e.get('sender','?')[:25]}</td><td>{e.get('subject','?')[:40]}</td><td><span class=\'badge bg-danger\'>Action</span></td></tr>" for e in emails) or "<tr><td colspan=3 class=\'text-muted p-3 text-center\'>No actions pending</td></tr>"
 
     content = f"""
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -518,12 +525,15 @@ def dashboard():
   <div class="col-6 col-md-3"><div class="stat-card text-center"><div class="stat-value">{dc}</div><div class="text-muted small">Total Deals</div></div></div>
 </div>
 <div class="row g-3">
+  <div class="col-md-6"><div class="card"><div class="card-header fw-semibold"><i class="bi bi-exclamation-circle text-warning me-2"></i>Today\'s Actions</div><div class="card-body p-0"><table class="table table-sm mb-0"><thead><tr><th>From</th><th>Subject</th><th>Type</th></tr></thead><tbody>{arow}</tbody></table></div></div></div>
+  <div class="col-md-6"><div class="card"><div class="card-header fw-semibold"><i class="bi bi-telephone text-info me-2"></i>Today\'s Calls</div><div class="card-body p-0"><table class="table table-sm mb-0"><thead><tr><th>Contact</th><th>Direction</th><th>Duration</th><th>Summary</th></tr></thead><tbody>{crow}</tbody></table></div></div></div>
   <div class="col-md-6"><div class="card"><div class="card-header fw-semibold">Recent Vacancies</div><div class="card-body p-0"><table class="table table-sm mb-0"><thead><tr><th>Address</th><th>Size</th><th>Rent</th></tr></thead><tbody>{vrow}</tbody></table></div></div></div>
   <div class="col-md-6"><div class="card"><div class="card-header fw-semibold">Active Requirements</div><div class="card-body p-0"><table class="table table-sm mb-0"><thead><tr><th>Company</th><th>Size</th><th>Budget</th></tr></thead><tbody>{rrow}</tbody></table></div></div></div>
-  <div class="col-md-6"><div class="card"><div class="card-header fw-semibold">Recent Documents</div><div class="card-body p-0"><table class="table table-sm mb-0"><thead><tr><th>File</th><th>Type</th><th>Date</th></tr></thead><tbody>{drow}</tbody></table></div></div></div>
   <div class="col-md-6"><div class="card"><div class="card-header fw-semibold">New Leads</div><div class="card-body p-0"><table class="table table-sm mb-0"><thead><tr><th>Company</th><th>Source</th><th>Status</th></tr></thead><tbody>{lrow}</tbody></table></div></div></div>
 </div>"""
     return layout(content, "Dashboard", "dashboard")
+
+
 
 @app.route("/upload", methods=["GET","POST"])
 @login_required
@@ -826,6 +836,56 @@ def webhook_whatsapp():
     body = request.form.get("Body","").strip()
     log.info("WA inbound %s: %s", from_num, body[:80])
     return "",200
+
+
+@app.route("/quotes")
+@login_required
+def quotes_page():
+    data = sb_select("quotes",limit=100)
+    rows = "".join(f"""<tr>
+      <td>{d.get('client','?')}</td>
+      <td>{d.get('property_address','?')}</td>
+      <td>{fc(d.get('quoted_rent_pa'))}</td>
+      <td>{d.get('deal_type','?')}</td>
+      <td>{sbadge(d.get('status'))}</td>
+      <td>{fd(d.get('created_at'))}</td>
+    </tr>""" for d in data) or "<tr><td colspan=6 class=\'text-muted p-4 text-center\'>No quotes yet</td></tr>"
+
+    content = f"""
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold mb-0">Quotes</h2>
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addQuote">
+    <i class="bi bi-plus-lg me-1"></i>Add Quote
+  </button>
+</div>
+<div class="card"><div class="card-body p-0">
+<table class="table table-hover mb-0">
+<thead><tr><th>Client</th><th>Property</th><th>Rent pa</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
+<tbody>{rows}</tbody></table></div></div>
+<div class="modal fade" id="addQuote" tabindex="-1"><div class="modal-dialog"><div class="modal-content" style="background:#1e293b">
+<div class="modal-header"><h5 class="modal-title">Add Quote</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+<form method="POST" action="/api/quotes"><div class="modal-body">
+<div class="mb-2"><input name="client" class="form-control" placeholder="Client / Company" required></div>
+<div class="mb-2"><input name="property_address" class="form-control" placeholder="Property Address"></div>
+<div class="row g-2 mb-2">
+  <div class="col"><input name="quoted_rent_pa" type="number" class="form-control" placeholder="Rent pa"></div>
+  <div class="col"><select name="deal_type" class="form-select"><option>Lease</option><option>Sale</option></select></div>
+</div>
+<div class="mb-2"><textarea name="notes" class="form-control" rows="2" placeholder="Notes"></textarea></div>
+<select name="status" class="form-select"><option>Draft</option><option>Sent</option><option>Accepted</option><option>Declined</option></select>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  <button type="submit" class="btn btn-primary">Add Quote</button>
+</div></form></div></div></div>"""
+    return layout(content, "Quotes", "quotes_page")
+
+@app.route("/api/quotes", methods=["POST"])
+@login_required
+def api_add_quote():
+    data = {k:v for k,v in request.form.items() if v}
+    flash("Quote added" if sb_insert("quotes",data) else "Failed to add","success" if data else "error")
+    return redirect(url_for("quotes_page"))
 
 @app.route("/health")
 def health():
