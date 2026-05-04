@@ -14,7 +14,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from twilio.rest import Client as TwilioClient
 import requests as http
-import openai
 from functools import wraps
 
 log = logging.getLogger(__name__)
@@ -169,8 +168,7 @@ def init_schema():
 # ── OpenAI ────────────────────────────────────────────────────────────────────
 def gpt(system, user, max_tokens=2000):
     try:
-        import httpx
-        client = openai.OpenAI(api_key=OPENAI_API_KEY, http_client=httpx.Client())
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
         r = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[{"role":"system","content":system},{"role":"user","content":user}],
@@ -183,8 +181,7 @@ def gpt(system, user, max_tokens=2000):
 
 def embed(text):
     try:
-        import httpx
-        client = openai.OpenAI(api_key=OPENAI_API_KEY, http_client=httpx.Client())
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
         r = client.embeddings.create(model=EMBED_MODEL, input=text[:8000])
         return r.data[0].embedding
     except Exception as e:
