@@ -493,6 +493,35 @@ def logout():
 @login_required
 def index(): return redirect(url_for("dashboard"))
 
+QUOTES = [
+    ("The secret of getting ahead is getting started.", "Mark Twain"),
+    ("Success is not final, failure is not fatal: it is the courage to continue that counts.", "Winston Churchill"),
+    ("The only way to do great work is to love what you do.", "Steve Jobs"),
+    ("In the middle of every difficulty lies opportunity.", "Albert Einstein"),
+    ("Your time is limited, don't waste it living someone else's life.", "Steve Jobs"),
+    ("The best time to plant a tree was 20 years ago. The second best time is now.", "Chinese Proverb"),
+    ("Don't watch the clock; do what it does. Keep going.", "Sam Levenson"),
+    ("Opportunities don't happen. You create them.", "Chris Grosser"),
+    ("The harder I work, the luckier I get.", "Gary Player"),
+    ("Success usually comes to those who are too busy to be looking for it.", "Henry David Thoreau"),
+    ("It does not matter how slowly you go as long as you do not stop.", "Confucius"),
+    ("The real estate market is local, and so is success.", "Unknown"),
+    ("In real estate, location is everything — but relationships are everything else.", "Unknown"),
+    ("A deal is only as good as the people in it.", "Unknown"),
+    ("Every property tells a story. Your job is to match it with the right tenant.", "Unknown"),
+    ("The best investment on earth is earth.", "Louis Glickman"),
+    ("Buy land, they're not making it anymore.", "Mark Twain"),
+    ("Real estate cannot be lost or stolen, nor can it be carried away.", "Franklin D. Roosevelt"),
+    ("To be successful in real estate, you must always and consistently put your client's best interests first.", "Ron Willingham"),
+    ("The most important thing in communication is hearing what isn't said.", "Peter Drucker"),
+]
+
+def get_quote_of_day():
+    import hashlib
+    day_hash = int(hashlib.md5(datetime.now().strftime("%Y-%m-%d").encode()).hexdigest(), 16)
+    q, author = QUOTES[day_hash % len(QUOTES)]
+    return f'{q} <span style="color:#f59e0b;font-style:normal;font-weight:600;">— {author}</span>'
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -514,9 +543,18 @@ def dashboard():
     arow = "".join(f"<tr><td>{e.get('sender','?')[:25]}</td><td>{e.get('subject','?')[:40]}</td><td><span class=\'badge bg-danger\'>Action</span></td></tr>" for e in emails) or "<tr><td colspan=3 class=\'text-muted p-3 text-center\'>No actions pending</td></tr>"
 
     content = f"""
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
   <h2 class="fw-bold mb-0">Dashboard</h2>
   <span class="text-muted">{datetime.now().strftime('%A, %d %B %Y')}</span>
+</div>
+<div class="mb-4 p-3" style="background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(99,102,241,.08));border:1px solid rgba(245,158,11,.25);border-radius:10px;">
+  <div class="d-flex align-items-start gap-3">
+    <i class="bi bi-quote" style="font-size:1.8rem;color:#f59e0b;line-height:1;"></i>
+    <div>
+      <div id="qotd" style="color:#e2e8f0;font-size:.95rem;font-style:italic;line-height:1.6;">{get_quote_of_day()}</div>
+      <div class="mt-1 small text-muted">Quote of the Day</div>
+    </div>
+  </div>
 </div>
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3"><div class="stat-card text-center"><div class="stat-value">{pc}</div><div class="text-muted small">Available Properties</div></div></div>
