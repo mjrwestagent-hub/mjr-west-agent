@@ -4632,7 +4632,7 @@ fileInput.addEventListener('change', function() {{
         fileInput.value = '';
       }})
       .catch(() => {{
-        fileNameEl.textContent = '❌ Failed - try again';
+        fileNameEl.textContent = '❌ Upload failed. Please try again.';
         submitBtn.disabled = false;
       }});
   }}
