@@ -167,23 +167,33 @@ def init_schema():
 
 # ── OpenAI ────────────────────────────────────────────────────────────────────
 def gpt(system, user, max_tokens=2000):
+    """Direct HTTP to OpenAI — no library needed."""
+    if not OPENAI_API_KEY:
+        return "{}"
     try:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-        r = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[{"role":"system","content":system},{"role":"user","content":user}],
-            temperature=0.1, max_tokens=max_tokens,
-            response_format={"type":"json_object"}
+        r = http.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+            json={"model": OPENAI_MODEL, "messages": [{"role":"system","content":system},{"role":"user","content":user}],
+                  "temperature": 0.1, "max_tokens": max_tokens, "response_format": {"type":"json_object"}},
+            timeout=60
         )
-        return r.choices[0].message.content
+        return r.json()["choices"][0]["message"]["content"] if r.status_code==200 else "{}"
     except Exception as e:
         log.error("gpt: %s", e); return "{}"
 
 def embed(text):
+    """Direct HTTP to OpenAI embeddings."""
+    if not OPENAI_API_KEY:
+        return []
     try:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
-        r = client.embeddings.create(model=EMBED_MODEL, input=text[:8000])
-        return r.data[0].embedding
+        r = http.post(
+            "https://api.openai.com/v1/embeddings",
+            headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+            json={"model": EMBED_MODEL, "input": text[:8000]},
+            timeout=30
+        )
+        return r.json()["data"][0]["embedding"] if r.status_code==200 else []
     except Exception as e:
         log.error("embed: %s", e); return []
 
