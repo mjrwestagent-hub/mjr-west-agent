@@ -73,12 +73,44 @@ def sb_select(table, filters=None, order="created_at", limit=200):
     except Exception as e:
         log.error("sb_select %s: %s", table, e); return []
 
+
+# Core indexed columns per table. AI extractions are split:
+# known fields → indexed columns, everything else → data{} JSONB.
+# This means any document type works without schema changes.
+CORE_COLS = {
+    "properties":   {"address","suburb","property_type","size_sqm","asking_rent_pa","status","landlord","source"},
+    "contacts":     {"name","company","phone","email","contact_type","lead_status","whatsapp_opt_in"},
+    "inquiries":    {"company","contact_name","size_min","size_max","budget","location","status","source"},
+    "deals":        {"tenant","landlord","deal_type","size_sqm","rent_pa","status","commission"},
+    "vacancies":    {"address","suburb","size_sqm","asking_rent_pa","available_date","vacating_tenant","status"},
+    "requirements": {"company","contact_name","size_min","size_max","budget_pa","preferred_location","region","status"},
+    "market_data":  {"address","suburb","deal_type","size_sqm","rent_pa","tenant","date_signed"},
+    "documents":    {"filename","ai_classification","ai_summary","ai_confidence","ai_urgency","processing_status","raw_extraction"},
+    "briefings":    {"briefing_type","content","channel"},
+    "email_logs":   {"sender","subject","body","ai_summary","ai_priority","requires_action","reply_status","source"},
+    "call_logs":    {"contact_name","phone","direction","duration_secs","notes","ai_summary"},
+    "fees":         {"deal_id","amount","invoice_status","invoice_date","paid_date","notes"},
+    "quotes":       {"client","property_address","quoted_rent_pa","deal_type","notes","status"},
+}
+
 def sb_insert(table, data):
+    """Smart insert: known columns go to indexed fields, extras go to data{} JSONB.
+    AI can return any fields — this handles it gracefully, forever."""
     try:
-        r = http.post(f"{SUPABASE_URL}/rest/v1/{table}", headers=SB_HDR, json=data, timeout=10)
+        core = CORE_COLS.get(table, set())
+        if core:
+            row = {k: v for k, v in data.items() if k in core and v is not None and v != ""}
+            extra = {k: v for k, v in data.items() if k not in core and k != "data" and v is not None}
+            if extra:
+                row["data"] = extra
+        else:
+            row = {k: v for k, v in data.items() if v is not None and v != ""}
+        if not row:
+            return None
+        r = http.post(f"{SUPABASE_URL}/rest/v1/{table}", headers=SB_HDR, json=row, timeout=10)
         if r.status_code in (200,201):
-            rows=r.json(); return rows[0] if rows else data
-        log.error("sb_insert %s: %s %s", table, r.status_code, r.text[:150])
+            rows=r.json(); return rows[0] if rows else row
+        log.error("sb_insert %s: %s %s", table, r.status_code, r.text[:200])
         return None
     except Exception as e:
         log.error("sb_insert %s: %s", table, e); return None
@@ -101,71 +133,84 @@ def sb_delete(table, row_id):
 
 # ── Schema ────────────────────────────────────────────────────────────────────
 def init_schema():
-    tables = [
-        ("properties", """id bigserial primary key, address text, suburb text default 'West Melbourne',
-         property_type text default 'Warehouse', size_sqm numeric, land_sqm numeric,
-         asking_rent_pa numeric, asking_price numeric, status text default 'Available',
-         landlord text, agent_name text, agent_phone text, agent_email text,
-         year_built int, zoning text, notes text, source text,
-         created_at timestamptz default now()"""),
-        ("contacts", """id bigserial primary key, name text, company text, phone text, email text,
-         contact_type text default 'Agent', lead_status text default 'Warm',
-         notes text, whatsapp_opt_in bool default false, created_at timestamptz default now()"""),
-        ("inquiries", """id bigserial primary key, company text, contact_name text, phone text, email text,
-         size_min numeric, size_max numeric, budget numeric, location text,
-         notes text, source text default 'Web', status text default 'New', score int default 0,
-         created_at timestamptz default now()"""),
-        ("deals", """id bigserial primary key, tenant text, landlord text,
-         deal_type text default 'Lease', size_sqm numeric, rent_pa numeric, sale_price numeric,
-         term_years numeric, start_date date, status text default 'Negotiation',
-         commission numeric, notes text, created_at timestamptz default now()"""),
-        ("vacancies", """id bigserial primary key, address text, suburb text default 'West Melbourne',
-         size_sqm numeric, asking_rent_pa numeric, available_date date,
-         vacating_tenant text, owner text, agent text, notes text,
-         status text default 'Available', created_at timestamptz default now()"""),
-        ("requirements", """id bigserial primary key, company text, contact_name text, phone text, email text,
-         size_min numeric, size_max numeric, budget_pa numeric,
-         preferred_location text default 'West Melbourne', region text default 'W',
-         use_type text, term_years numeric, timeline text, rating text, notes text,
-         status text default 'Active', created_at timestamptz default now()"""),
-        ("market_data", """id bigserial primary key, address text, suburb text default 'West Melbourne',
-         deal_type text default 'Lease', size_sqm numeric, rent_pa numeric, sale_price numeric,
-         term_years numeric, tenant text, landlord text, date_signed date, source text, notes text,
-         created_at timestamptz default now()"""),
-        ("documents", """id bigserial primary key, filename text,
-         ai_classification text default 'unknown', ai_summary text,
-         ai_confidence numeric default 0, ai_urgency text default 'low',
-         action_items jsonb default '[]', key_facts jsonb default '{}',
-         extracted_properties int default 0, extracted_contacts int default 0,
-         extracted_requirements int default 0, extracted_vacancies int default 0,
-         mentioned_companies jsonb default '[]',
-         processing_status text default 'pending', created_at timestamptz default now()"""),
-        ("briefings", """id bigserial primary key, briefing_type text default 'Daily',
-         content text, channel text default 'WhatsApp', sent_at timestamptz default now()"""),
-        ("email_logs", """id bigserial primary key, sender text, subject text, body text,
-         ai_summary text, ai_priority text default 'medium',
-         requires_action bool default false, action_items jsonb default '[]',
-         reply_status text default 'pending', source text default 'gmail_imap',
-         received_at timestamptz default now()"""),
-        ("call_logs", """id bigserial primary key, contact_name text, phone text,
-         direction text default 'Inbound', duration_secs int, notes text,
-         ai_summary text, created_at timestamptz default now()"""),
-        ("quotes", """id bigserial primary key, client text, property_address text,
-         quoted_rent_pa numeric, deal_type text default \'Lease\', notes text,
-         status text default \'Draft\', created_at timestamptz default now()"""),
-        ("fees", """id bigserial primary key, deal_id bigint, amount numeric,
-         invoice_status text default 'Pending', invoice_date date, paid_date date,
-         notes text, created_at timestamptz default now()"""),
+    """Create tables with JSONB data column for flexible AI extractions.
+    Core indexed fields for querying, data{} for everything else.
+    Schema never needs changing — new document types work automatically."""
+    sqls = [
+        """create table if not exists properties (
+            id bigserial primary key, address text, suburb text default 'West Melbourne',
+            property_type text default 'Warehouse', size_sqm numeric, asking_rent_pa numeric,
+            status text default 'Available', landlord text, source text,
+            data jsonb default '{}', created_at timestamptz default now())""",
+        """create table if not exists contacts (
+            id bigserial primary key, name text, company text, phone text, email text,
+            contact_type text default 'Agent', lead_status text default 'Warm',
+            whatsapp_opt_in bool default false, data jsonb default '{}',
+            created_at timestamptz default now())""",
+        """create table if not exists inquiries (
+            id bigserial primary key, company text, contact_name text,
+            size_min numeric, size_max numeric, budget numeric, location text,
+            status text default 'New', source text default 'Web',
+            data jsonb default '{}', created_at timestamptz default now())""",
+        """create table if not exists deals (
+            id bigserial primary key, tenant text, landlord text,
+            deal_type text default 'Lease', size_sqm numeric, rent_pa numeric,
+            status text default 'Negotiation', commission numeric,
+            data jsonb default '{}', created_at timestamptz default now())""",
+        """create table if not exists vacancies (
+            id bigserial primary key, address text, suburb text default 'West Melbourne',
+            size_sqm numeric, asking_rent_pa numeric, available_date date,
+            vacating_tenant text, status text default 'Available',
+            data jsonb default '{}', created_at timestamptz default now())""",
+        """create table if not exists requirements (
+            id bigserial primary key, company text, contact_name text,
+            size_min numeric, size_max numeric, budget_pa numeric,
+            preferred_location text default 'West Melbourne', region text default 'W',
+            status text default 'Active', data jsonb default '{}',
+            created_at timestamptz default now())""",
+        """create table if not exists market_data (
+            id bigserial primary key, address text, suburb text default 'West Melbourne',
+            deal_type text default 'Lease', size_sqm numeric, rent_pa numeric,
+            tenant text, date_signed date, data jsonb default '{}',
+            created_at timestamptz default now())""",
+        """create table if not exists documents (
+            id bigserial primary key, filename text,
+            ai_classification text default 'unknown', ai_summary text,
+            ai_confidence numeric default 0, ai_urgency text default 'low',
+            processing_status text default 'pending', raw_extraction jsonb default '{}',
+            created_at timestamptz default now())""",
+        """create table if not exists briefings (
+            id bigserial primary key, briefing_type text default 'Daily',
+            content text, channel text default 'WhatsApp',
+            sent_at timestamptz default now())""",
+        """create table if not exists email_logs (
+            id bigserial primary key, sender text, subject text, body text,
+            ai_summary text, ai_priority text default 'medium',
+            requires_action bool default false, reply_status text default 'pending',
+            source text default 'gmail_imap', data jsonb default '{}',
+            received_at timestamptz default now())""",
+        """create table if not exists call_logs (
+            id bigserial primary key, contact_name text, phone text,
+            direction text default 'Inbound', duration_secs int,
+            notes text, ai_summary text, data jsonb default '{}',
+            created_at timestamptz default now())""",
+        """create table if not exists fees (
+            id bigserial primary key, deal_id bigint, amount numeric,
+            invoice_status text default 'Pending', invoice_date date,
+            paid_date date, notes text, created_at timestamptz default now())""",
+        """create table if not exists quotes (
+            id bigserial primary key, client text, property_address text,
+            quoted_rent_pa numeric, deal_type text default 'Lease',
+            notes text, status text default 'Draft',
+            created_at timestamptz default now())""",
     ]
-    for name, cols in tables:
+    for sql in sqls:
         r = http.post(f"{SUPABASE_URL}/rest/v1/rpc/exec_sql",
-                      headers=SB_HDR,
-                      json={"query": f"create table if not exists {name} ({cols})"},
-                      timeout=15)
+                      headers=SB_HDR, json={"query": sql}, timeout=15)
         if r.status_code not in (200,201,204):
-            log.info("Table %s may already exist: %s", name, r.status_code)
+            log.info("Table may already exist: %s", r.status_code)
 
-# ── OpenAI ────────────────────────────────────────────────────────────────────
+
 def gpt(system, user, max_tokens=2000):
     """Direct HTTP to OpenAI — no library needed."""
     if not OPENAI_API_KEY:
