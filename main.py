@@ -39,6 +39,7 @@ TIMEZONE       = os.getenv("TIMEZONE","Australia/Melbourne")
 BRIEFING_HOUR  = int(os.getenv("BRIEFING_HOUR","7"))
 BRIEFING_MIN   = int(os.getenv("BRIEFING_MINUTE","0"))
 APP_URL        = os.getenv("APP_URL","")
+GITHUB_REPO    = os.getenv("GITHUB_REPO","mjrwestagent-hub/mjr-west-agent")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -504,6 +505,20 @@ def layout(content, title="MJR West", active=""):
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body></html>""")
 
+def dget(row, *keys):
+    """Get value from row or data{} JSONB fallback."""
+    for k in keys:
+        v = row.get(k)
+        if v is not None and str(v) not in ("", "None", "none"): return v
+    data = row.get("data") or {}
+    if isinstance(data, str):
+        try: data = json.loads(data)
+        except: data = {}
+    for k in keys:
+        v = data.get(k)
+        if v is not None and str(v) not in ("", "None", "none"): return v
+    return None
+
 def fc(v):
     try: return f"${float(v):,.0f}" if v else "—"
     except: return "—"
@@ -727,7 +742,7 @@ def table_page(endpoint, title, cols, headers, rows_fn):
 @login_required
 def properties():
     data = sb_select("properties",limit=200)
-    rows = "".join(f"<tr><td>{d.get('address','?')}</td><td>{d.get('suburb','?')}</td><td>{d.get('property_type','?')}</td><td>{d.get('size_sqm','?')}</td><td>{fc(d.get('asking_rent_pa'))}</td><td>{sbadge(d.get('status'))}</td><td>{d.get('landlord','?')}</td></tr>" for d in data) or "<tr><td colspan=7 class='text-muted p-4 text-center'>No properties yet</td></tr>"
+    rows = "".join(f"<tr><td>{dget(d,'address') or '?'}</td><td>{dget(d,'suburb','city','location') or 'West Melbourne'}</td><td>{dget(d,'property_type','type','asset_type') or 'Warehouse'}</td><td>{dget(d,'size_sqm','size','gla','area') or '?'}</td><td>{fc(dget(d,'asking_rent_pa','rent_pa','rent','annual_rent'))}</td><td>{sbadge(dget(d,'status','occupancy_status') or 'Available')}</td><td>{dget(d,'landlord','owner','landlord_name') or '?'}</td></tr>" for d in data) or "<tr><td colspan=7 class='text-muted p-4 text-center'>No properties yet</td></tr>"
     content = f"""<div class="d-flex justify-content-between align-items-center mb-4"><h2 class="fw-bold mb-0">Properties</h2>
 <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addProp"><i class="bi bi-plus-lg me-1"></i>Add</button></div>
 <div class="card"><div class="card-body p-0"><table class="table table-hover mb-0">
@@ -802,7 +817,7 @@ def vacancies():
 @login_required
 def requirements():
     data = sb_select("requirements",limit=200)
-    rows = "".join(f"<tr><td>{d.get('company','?')}</td><td>{d.get('contact_name','?')}</td><td>{d.get('size_min','?')}-{d.get('size_max','?')} sqm</td><td>{fc(d.get('budget_pa'))}</td><td>{d.get('preferred_location','?')}</td><td>{d.get('timeline','?')}</td><td>{sbadge(d.get('status'))}</td></tr>" for d in data) or "<tr><td colspan=7 class='text-muted p-4 text-center'>No requirements yet</td></tr>"
+    rows = "".join(f"<tr><td>{dget(d,'company','company_name','tenant') or '?'}</td><td>{dget(d,'contact_name','contact','name') or '?'}</td><td>{dget(d,'size_min','min_size') or '?'}-{dget(d,'size_max','max_size') or '?'} sqm</td><td>{fc(dget(d,'budget_pa','budget','max_rent_pa','rent_budget'))}</td><td>{dget(d,'preferred_location','location','suburb') or 'West Melbourne'}</td><td>{dget(d,'timeline','required_by') or '?'}</td><td>{sbadge(dget(d,'status') or 'Active')}</td></tr>" for d in data) or "<tr><td colspan=7 class='text-muted p-4 text-center'>No requirements yet</td></tr>"
     content = f"""<h2 class="fw-bold mb-4">Requirements</h2>
 <div class="card"><div class="card-body p-0"><table class="table table-hover mb-0">
 <thead><tr><th>Company</th><th>Contact</th><th>Size</th><th>Budget pa</th><th>Location</th><th>Timeline</th><th>Status</th></tr></thead>
@@ -978,6 +993,54 @@ def api_add_quote():
     data = {k:v for k,v in request.form.items() if v}
     flash("Quote added" if sb_insert("quotes",data) else "Failed to add","success" if data else "error")
     return redirect(url_for("quotes_page"))
+
+
+@app.route("/api/push", methods=["POST"])
+def api_push():
+    """Autonomous code push endpoint. Accepts code changes and pushes to GitHub.
+    Protected by admin auth. Used by Claude to push fixes autonomously."""
+    auth = request.headers.get("Authorization","")
+    if auth != f"Bearer {ADMIN_PASSWORD}":
+        return jsonify({"error": "unauthorized"}), 401
+    
+    data = request.json or {}
+    filename = data.get("filename", "main.py")
+    content  = data.get("content", "")
+    message  = data.get("message", "auto: fix")
+    token    = os.getenv("GITHUB_TOKEN","")
+    repo     = os.getenv("GITHUB_REPO", "mjrwestagent-hub/mjr-west-agent")
+    
+    if not token:
+        return jsonify({"error": "GITHUB_TOKEN not set"}), 500
+    if not content:
+        return jsonify({"error": "no content"}), 400
+
+    try:
+        import base64 as b64
+        # Get current file SHA
+        r = http.get(
+            f"https://api.github.com/repos/{repo}/contents/{filename}",
+            headers={"Authorization": f"token {token}", "User-Agent": "TurkishAgent"}
+        )
+        if r.status_code != 200:
+            return jsonify({"error": f"get file failed: {r.status_code}"}), 500
+        sha = r.json()["sha"]
+        
+        # Push updated file
+        encoded = b64.b64encode(content.encode("utf-8")).decode("ascii")
+        r2 = http.put(
+            f"https://api.github.com/repos/{repo}/contents/{filename}",
+            headers={"Authorization": f"token {token}", "User-Agent": "TurkishAgent", "Content-Type": "application/json"},
+            json={"message": message, "content": encoded, "sha": sha}
+        )
+        if r2.status_code in (200, 201):
+            commit = r2.json().get("commit",{}).get("sha","")[:8]
+            log.info("Auto-push success: %s -> %s", message, commit)
+            return jsonify({"success": True, "commit": commit})
+        return jsonify({"error": f"push failed: {r2.status_code}", "detail": r2.text[:200]}), 500
+    except Exception as e:
+        log.error("api_push: %s", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/health")
 def health():
