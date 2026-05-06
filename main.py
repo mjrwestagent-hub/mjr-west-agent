@@ -505,6 +505,20 @@ def layout(content, title="MJR West", active=""):
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body></html>""")
 
+def prop_addr(row):
+    a = row.get('address')
+    if a and str(a) not in ('','None','none','null'): return a
+    data = row.get('data') or {}
+    if isinstance(data, str):
+        try: import json as _j; data = _j.loads(data)
+        except: data = {}
+    full = data.get('full_address') or data.get('latitude_longitude','')
+    if full and len(str(full)) > 5 and '{' not in str(full): return str(full)[:50]
+    num = data.get('number','') or ''
+    street = data.get('street','') or ''
+    if street: return f"{num} {street}".strip()
+    return '?'
+
 def dget(row, *keys):
     """Get value from row or data{} JSONB fallback."""
     for k in keys:
