@@ -608,7 +608,7 @@ def get_quote_of_day():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    pc = len(sb_select("properties",{"status":"eq.Available"}))
+    pc = len(sb_select("properties"))
     vc = len(sb_select("vacancies",{"status":"eq.Available"}))
     rc = len(sb_select("requirements",{"status":"eq.Active"}))
     dc = len(sb_select("deals"))
