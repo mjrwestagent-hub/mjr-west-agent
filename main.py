@@ -872,6 +872,63 @@ def requirements():
 <tbody>{rows}</tbody></table></div></div>"""
     return layout(content, "Requirements", "requirements")
 
+
+def gmail_get_access_token():
+    """Get fresh Gmail access token using stored refresh token."""
+    import urllib.parse, json as _j, urllib.request as _ur
+    rows = sb_select("settings", {"key": "eq.gmail_refresh_token"})
+    if not rows: return None
+    refresh_token = rows[0].get("value","")
+    if not refresh_token: return None
+    data = urllib.parse.urlencode({
+        "client_id": os.environ.get("GOOGLE_CLIENT_ID",""),
+        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET",""),
+        "refresh_token": refresh_token,
+        "grant_type": "refresh_token"
+    }).encode()
+    req = _ur.Request("https://oauth2.googleapis.com/token", data=data, method="POST")
+    try:
+        with _ur.urlopen(req) as resp:
+            return _j.loads(resp.read()).get("access_token")
+    except Exception as e:
+        log.error("gmail token refresh error: %s", e)
+        return None
+
+def gmail_fetch_emails(max_results=20, query=""):
+    """Fetch emails from Gmail API."""
+    import urllib.request as _ur, json as _j, urllib.parse
+    token = gmail_get_access_token()
+    if not token: return []
+    q = urllib.parse.urlencode({"maxResults": max_results, "q": query or "is:unread"})
+    req = _ur.Request(
+        f"https://gmail.googleapis.com/gmail/v1/users/me/messages?{q}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    try:
+        with _ur.urlopen(req) as resp:
+            data = _j.loads(resp.read())
+        messages = data.get("messages", [])
+        results = []
+        for msg in messages[:10]:
+            req2 = _ur.Request(
+                f"https://gmail.googleapis.com/gmail/v1/users/me/messages/{msg['id']}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            with _ur.urlopen(req2) as resp2:
+                detail = _j.loads(resp2.read())
+            headers = {h["name"]: h["value"] for h in detail.get("payload",{}).get("headers",[])}
+            results.append({
+                "id": msg["id"],
+                "subject": headers.get("Subject","(no subject)"),
+                "from": headers.get("From",""),
+                "date": headers.get("Date",""),
+                "snippet": detail.get("snippet","")
+            })
+        return results
+    except Exception as e:
+        log.error("gmail fetch error: %s", e)
+        return []
+
 @app.route("/email")
 @login_required
 def email_page():
