@@ -537,10 +537,6 @@ def fc(v):
     try: return f"${float(v):,.0f}" if v else "—"
     except: return "—"
 
-def fsz(v):
-    try: return f"{int(float(v)):,}" if v else "?"
-    except: return str(v) if v else "?"
-
 def fd(s):
     try: return datetime.fromisoformat(str(s)).strftime("%d %b %Y") if s else "—"
     except: return str(s) if s else "—"
@@ -838,7 +834,7 @@ def requirements():
     rows = "".join(f"<tr><td>{dget(d,'company','company_name','tenant') or '?'}</td><td>{dget(d,'contact_name','contact','name') or '?'}</td><td>{dget(d,'size_min','min_size') or '?'}-{dget(d,'size_max','max_size') or '?'} sqm</td><td>{fc(dget(d,'budget_pa','budget','max_rent_pa','rent_budget'))}</td><td>{dget(d,'preferred_location','location','suburb') or 'West Melbourne'}</td><td>{dget(d,'timeline','required_by') or '?'}</td><td>{sbadge(dget(d,'status') or 'Active')}</td></tr>" for d in data) or "<tr><td colspan=7 class='text-muted p-4 text-center'>No requirements yet</td></tr>"
     content = f"""<h2 class="fw-bold mb-4">Requirements</h2>
 <div class="card"><div class="card-body p-0"><table class="table table-hover mb-0">
-<thead><tr><th>Company</th><th>Agent</th><th>Size</th><th>Budget pa</th><th>Region</th><th>Notes</th><th>Status</th></tr></thead>
+<thead><tr><th>Company</th><th>Contact</th><th>Size</th><th>Budget pa</th><th>Location</th><th>Timeline</th><th>Status</th></tr></thead>
 <tbody>{rows}</tbody></table></div></div>"""
     return layout(content, "Requirements", "requirements")
 
