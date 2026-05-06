@@ -546,6 +546,40 @@ def sbadge(status):
     return f'<span class="badge bg-{c} bg-opacity-25 text-{c}">{status or "—"}</span>'
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
+# ── Gmail OAuth2 ─────────────────────────────────────────────────────────────
+@app.route("/auth/google")
+def auth_google():
+    import urllib.parse
+    params = urllib.parse.urlencode({
+        "client_id": os.environ.get("GOOGLE_CLIENT_ID",""),
+        "redirect_uri": os.environ.get("GOOGLE_REDIRECT_URI",""),
+        "response_type": "code",
+        "scope": "https://www.googleapis.com/auth/gmail.readonly",
+        "access_type": "offline", "prompt": "consent"
+    })
+    return redirect(f"https://accounts.google.com/o/oauth2/auth?{params}")
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    import urllib.parse, json as _j, urllib.request
+    code = request.args.get("code","")
+    if not code: return "No code", 400
+    data = urllib.parse.urlencode({
+        "code": code,
+        "client_id": os.environ.get("GOOGLE_CLIENT_ID",""),
+        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET",""),
+        "redirect_uri": os.environ.get("GOOGLE_REDIRECT_URI",""),
+        "grant_type": "authorization_code"
+    }).encode()
+    req = urllib.request.Request("https://oauth2.googleapis.com/token", data=data, method="POST")
+    with urllib.request.urlopen(req) as resp:
+        tokens = _j.loads(resp.read())
+    sb_upsert("settings", {"key": "gmail_refresh_token", "value": tokens.get("refresh_token","")})
+    sb_upsert("settings", {"key": "gmail_access_token", "value": tokens.get("access_token","")})
+    log.info("Gmail OAuth2 connected")
+    return redirect("/email?status=gmail_connected")
+
 @app.route("/login", methods=["GET","POST"])
 def login():
     if request.method=="POST":
