@@ -575,8 +575,14 @@ def auth_google_callback():
     req = urllib.request.Request("https://oauth2.googleapis.com/token", data=data, method="POST")
     with urllib.request.urlopen(req) as resp:
         tokens = _j.loads(resp.read())
-    sb_upsert("settings", {"key": "gmail_refresh_token", "value": tokens.get("refresh_token","")})
-    sb_upsert("settings", {"key": "gmail_access_token", "value": tokens.get("access_token","")})
+    # Store tokens in Supabase settings table
+    for k, v in [("gmail_refresh_token", tokens.get("refresh_token","")), ("gmail_access_token", tokens.get("access_token",""))]:
+        try:
+            sb_req("POST", "/rest/v1/settings",
+                   json.dumps({"key": k, "value": v}).encode(),
+                   {"Prefer": "resolution=merge-duplicates,return=minimal"})
+        except Exception as _e:
+            log.error("token save error: %s", _e)
     log.info("Gmail OAuth2 connected")
     return redirect("/email?status=gmail_connected")
 
