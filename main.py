@@ -384,12 +384,20 @@ def build_brief():
         avail_vacs = [v for v in vacs if not v.get('status') or str(v.get('status','')).lower() in ('available','')]
         active_reqs = [r for r in reqs if str(r.get('status','')).lower() not in ('closed','inactive','completed')]
         def fmt_sqm(v):
-            try: return f'{int(float(v)):,}' if v else '?'
-            except: return str(v) if v else '?'
+            try:
+                import re as _re; s=_re.sub(r'[^0-9.]','',str(v or ''));
+                return f'{int(float(s)):,}' if s else '?'
+            except: return '?'
         def fmt_rent(v):
-            try: return f'${float(v)/1000:.0f}k' if v and float(v)>0 else '-'
+            try:
+                import re as _re2; s=_re2.sub(r'[^0-9.]','',str(v or ''));
+                return f'${float(s)/1000:.0f}k' if s and float(s)>0 else '-'
             except: return '-'
-        total_rent = sum(float(v.get('asking_rent_pa') or 0) for v in avail_vacs if v.get('asking_rent_pa'))
+        def sf(x):
+            try:
+                import re as _re3; s=_re3.sub(r'[^0-9.]','',str(x or '')); return float(s) if s else 0.0
+            except: return 0.0
+        total_rent = sum(sf(v.get('asking_rent_pa')) for v in avail_vacs)
         comm = total_rent * 0.10
         lines = [
             f'*MJR West — {aest.strftime("%a %d %b %I:%M%p")}*',
