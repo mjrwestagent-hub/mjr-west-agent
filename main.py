@@ -1148,8 +1148,27 @@ def api_send_briefing():
     phone = data.get("phone") or sb_select("settings", {"key": "eq.whatsapp_number"})
     if isinstance(phone, list): phone = phone[0].get("value","") if phone else ""
     if not phone: return jsonify({"error":"no phone"}), 400
-    threading.Thread(target=send_daily_briefing, args=(phone,), daemon=True).start()
-    return jsonify({"success": True, "phone": phone})
+    # Run synchronously so we can catch errors
+    try:
+        brief = build_brief()
+        sb_insert("briefings",{"briefing_type":"Daily","content":brief,"channel":"WhatsApp"})
+        import urllib.request as _ur2, urllib.parse as _up2, base64 as _b64
+        sid = os.environ.get("TWILIO_ACCOUNT_SID","")
+        token2 = os.environ.get("TWILIO_AUTH_TOKEN","")
+        from_wa = os.environ.get("TWILIO_WHATSAPP_FROM","whatsapp:+14155238886")
+        payload2 = _up2.urlencode({"From": from_wa, "To": f"whatsapp:{phone}", "Body": brief[:1500]}).encode()
+        creds2 = _b64.b64encode(f"{sid}:{token2}".encode()).decode()
+        req2 = _ur2.Request(
+            f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
+            data=payload2,
+            headers={"Authorization": f"Basic {creds2}", "Content-Type": "application/x-www-form-urlencoded"},
+            method="POST"
+        )
+        with _ur2.urlopen(req2) as resp2:
+            twilio_result = json.loads(resp2.read())
+        return jsonify({"success": True, "phone": phone, "twilio_status": twilio_result.get("status"), "twilio_sid": twilio_result.get("sid")})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 @app.route("/api/push", methods=["POST"])
 def api_push():
