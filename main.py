@@ -1100,6 +1100,18 @@ def api_add_quote():
     return redirect(url_for("quotes_page"))
 
 
+
+@app.route("/api/briefing/send", methods=["POST"])
+def api_send_briefing():
+    auth = request.headers.get("Authorization","")
+    if auth != f"Bearer {os.environ.get('ADMIN_PASSWORD','')}": return jsonify({"error":"unauthorized"}), 401
+    data = request.get_json() or {}
+    phone = data.get("phone") or sb_select("settings", {"key": "eq.whatsapp_number"})
+    if isinstance(phone, list): phone = phone[0].get("value","") if phone else ""
+    if not phone: return jsonify({"error":"no phone"}), 400
+    threading.Thread(target=send_daily_briefing, args=(phone,), daemon=True).start()
+    return jsonify({"success": True, "phone": phone})
+
 @app.route("/api/push", methods=["POST"])
 def api_push():
     """Autonomous code push endpoint. Accepts code changes and pushes to GitHub.
