@@ -1109,6 +1109,37 @@ def api_add_quote():
 
 
 
+
+@app.route("/api/whatsapp/test", methods=["POST"])
+def api_whatsapp_test():
+    auth = request.headers.get("Authorization","")
+    if auth != f"Bearer {os.environ.get('ADMIN_PASSWORD','')}": return jsonify({"error":"unauthorized"}), 401
+    data = request.get_json() or {}
+    phone = data.get("phone", "+61437088422")
+    msg = data.get("message", "Test from Turkish the Agent 🏭")
+    try:
+        import urllib.request as _ur, urllib.parse as _up, base64 as _b64
+        sid = os.environ.get("TWILIO_ACCOUNT_SID","")
+        token = os.environ.get("TWILIO_AUTH_TOKEN","")
+        from_wa = os.environ.get("TWILIO_WHATSAPP_FROM","whatsapp:+14155238886")
+        payload = _up.urlencode({
+            "From": from_wa,
+            "To": f"whatsapp:{phone}",
+            "Body": msg
+        }).encode()
+        creds = _b64.b64encode(f"{sid}:{token}".encode()).decode()
+        req = _ur.Request(
+            f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
+            data=payload,
+            headers={"Authorization": f"Basic {creds}", "Content-Type": "application/x-www-form-urlencoded"},
+            method="POST"
+        )
+        with _ur.urlopen(req) as resp:
+            result = json.loads(resp.read())
+        return jsonify({"success": True, "sid": result.get("sid"), "status": result.get("status"), "to": result.get("to")})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
 @app.route("/api/briefing/send", methods=["POST"])
 def api_send_briefing():
     auth = request.headers.get("Authorization","")
