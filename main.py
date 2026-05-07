@@ -375,21 +375,58 @@ def broadcast_whatsapp(body):
 
 # ── Briefing ──────────────────────────────────────────────────────────────────
 def build_brief():
-    props = sb_select("properties",{"status":"eq.Available"},limit=50)
-    vacs  = sb_select("vacancies",{"status":"eq.Available"},limit=10)
-    reqs  = sb_select("requirements",{"status":"eq.Active"},limit=10)
-    deals = sb_select("deals",limit=5)
-    lines = [f"🏭 MJR West Daily Brief — {datetime.now().strftime('%a %d %b %Y')}",
-             f"\n📊 Properties: {len(props)} | Vacancies: {len(vacs)} | Requirements: {len(reqs)} | Deals: {len(deals)}"]
-    if vacs:
-        lines.append("\n🔑 VACANCIES")
-        for v in vacs[:3]:
-            lines.append(f"• {v.get('address','?')} {v.get('size_sqm','?')}sqm ${v.get('asking_rent_pa',0):,.0f}pa")
-    if reqs:
-        lines.append("\n🔍 REQUIREMENTS")
-        for r in reqs[:3]:
-            lines.append(f"• {r.get('company','?')} {r.get('size_min','?')}-{r.get('size_max','?')}sqm ${r.get('budget_pa',0):,.0f}pa")
-    return "\n".join(lines)
+    try:
+        from datetime import timezone, timedelta
+        aest = datetime.now(tz=timezone(timedelta(hours=10)))
+        vacs  = sb_select('vacancies', {}, limit=50) or []
+        reqs  = sb_select('requirements', {}, limit=100) or []
+        deals = sb_select('deals', {}, limit=100) or []
+        avail_vacs = [v for v in vacs if not v.get('status') or str(v.get('status','')).lower() in ('available','')]
+        active_reqs = [r for r in reqs if str(r.get('status','')).lower() not in ('closed','inactive','completed')]
+        def fmt_sqm(v):
+            try: return f'{int(float(v)):,}' if v else '?'
+            except: return str(v) if v else '?'
+        def fmt_rent(v):
+            try: return f'${float(v)/1000:.0f}k' if v and float(v)>0 else '-'
+            except: return '-'
+        total_rent = sum(float(v.get('asking_rent_pa') or 0) for v in avail_vacs if v.get('asking_rent_pa'))
+        comm = total_rent * 0.10
+        lines = [
+            f'*MJR West — {aest.strftime("%a %d %b %I:%M%p")}*',
+            '',
+            '*Pipeline*',
+            f'• {len(avail_vacs)} vacancies (${total_rent/1000000:.1f}M pa total)',
+            f'• {len(active_reqs)} requirements | {len(deals)} deals',
+            f'• Commission pipeline ~${comm/1000:.0f}k',
+        ]
+        if avail_vacs:
+            lines += ['', '*Top Vacancies*']
+            for v in sorted(avail_vacs, key=lambda x: float(x.get('size_sqm') or 0), reverse=True)[:4]:
+                lines.append(f"• {v.get('address','?')} — {fmt_sqm(v.get('size_sqm'))}sqm — {fmt_rent(v.get('asking_rent_pa'))}")
+        if active_reqs:
+            lines += ['', '*Requirements*']
+            for r in active_reqs[:4]:
+                co = r.get('company') or dget(r,'company','company_name') or '?'
+                sz = r.get('size_min') or dget(r,'size_min','ideal_gla_size') or '?'
+                lines.append(f'• {co} — {fmt_sqm(sz)}sqm')
+        matches = []
+        for v in avail_vacs[:10]:
+            vsz = float(v.get('size_sqm') or 0)
+            if not vsz: continue
+            for r in active_reqs[:30]:
+                rsz = float(r.get('size_min') or dget(r,'size_min','ideal_gla_size') or 0)
+                if rsz > 0 and rsz*0.7 <= vsz <= rsz*1.5:
+                    matches.append(f"• {v.get('address','?')} ↔ {r.get('company','?')} ({fmt_sqm(vsz)}sqm)")
+                    break
+            if len(matches) >= 3: break
+        if matches:
+            lines += ['', '*Potential Matches*']
+            lines.extend(matches)
+        lines += ['', 'Have a great day! 💪']
+        return '\n'.join(lines)
+    except Exception as e:
+        log.error('build_brief error: %s', e)
+        return f'MJR West Daily Brief\n\nError: {e}\n\ntturkishtheagent.com'
 
 def send_daily_briefing(phone=None):
     brief = build_brief()
