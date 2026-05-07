@@ -391,11 +391,19 @@ def build_brief():
             lines.append(f"• {r.get('company','?')} {r.get('size_min','?')}-{r.get('size_max','?')}sqm ${r.get('budget_pa',0):,.0f}pa")
     return "\n".join(lines)
 
-def send_daily_briefing():
+def send_daily_briefing(phone=None):
     brief = build_brief()
     sb_insert("briefings",{"briefing_type":"Daily","content":brief,"channel":"WhatsApp"})
-    broadcast_whatsapp(brief)
-    log.info("Daily briefing sent")
+    # Get phone from arg, then settings, then WA_BROADCAST
+    if not phone:
+        rows = sb_select("settings", {"key": "eq.whatsapp_number"})
+        phone = rows[0].get("value","") if rows else ""
+    if phone:
+        send_whatsapp(phone, brief)
+        log.info("Daily briefing sent to %s", phone)
+    else:
+        broadcast_whatsapp(brief)
+        log.info("Daily briefing broadcast")
 
 def check_gmail():
     if not (GMAIL_USER and GMAIL_PASS): return
