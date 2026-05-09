@@ -358,14 +358,30 @@ def process_document(filepath, filename):
 
 # ── WhatsApp ──────────────────────────────────────────────────────────────────
 def send_whatsapp(to, body):
-    if not (TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM): return False
+    """Send WhatsApp message via Twilio REST API (no library)."""
+    if not (TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM): 
+        log.error("send_whatsapp: missing Twilio credentials")
+        return False
     try:
-        c = TwilioClient(TWILIO_SID, TWILIO_TOKEN)
+        import urllib.request as _ur, urllib.parse as _up, base64 as _b64
         to_w = to if to.startswith("whatsapp:") else f"whatsapp:{to}"
-        c.messages.create(from_=TWILIO_FROM, to=to_w, body=body[:1500])
+        from_w = TWILIO_FROM if TWILIO_FROM.startswith("whatsapp:") else f"whatsapp:{TWILIO_FROM}"
+        payload = _up.urlencode({"From": from_w, "To": to_w, "Body": body}).encode()
+        creds = _b64.b64encode(f"{TWILIO_SID}:{TWILIO_TOKEN}".encode()).decode()
+        req = _ur.Request(
+            f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_SID}/Messages.json",
+            data=payload,
+            headers={"Authorization": f"Basic {creds}", "Content-Type": "application/x-www-form-urlencoded"},
+            method="POST"
+        )
+        with _ur.urlopen(req) as resp:
+            result = json.loads(resp.read())
+        log.info("WhatsApp sent to %s sid=%s status=%s", to, result.get("sid"), result.get("status"))
         return True
     except Exception as e:
-        log.error("send_whatsapp %s: %s", to, e); return False
+        log.error("send_whatsapp error: %s", e)
+        return False
+
 
 def broadcast_whatsapp(body):
     if not WA_BROADCAST: return
@@ -437,18 +453,21 @@ def build_brief():
         return f'MJR West Daily Brief\n\nError: {e}\n\ntturkishtheagent.com'
 
 def send_daily_briefing(phone=None):
-    brief = build_brief()
-    sb_insert("briefings",{"briefing_type":"Daily","content":brief,"channel":"WhatsApp"})
-    # Get phone from arg, then settings, then WA_BROADCAST
-    if not phone:
-        rows = sb_select("settings", {"key": "eq.whatsapp_number"})
-        phone = rows[0].get("value","") if rows else ""
-    if phone:
-        send_whatsapp(phone, brief)
-        log.info("Daily briefing sent to %s", phone)
-    else:
-        broadcast_whatsapp(brief)
-        log.info("Daily briefing broadcast")
+    """Build and send morning briefing via WhatsApp."""
+    try:
+        brief = build_brief()
+        sb_insert("briefings", {"briefing_type": "Daily", "content": brief, "channel": "WhatsApp"})
+        if not phone:
+            rows = sb_select("settings", {"key": "eq.whatsapp_number"})
+            phone = rows[0].get("value", "") if rows else ""
+        if not phone:
+            log.error("send_daily_briefing: no phone number configured")
+            return
+        result = send_whatsapp(phone, brief)
+        log.info("Daily briefing sent to %s: %s", phone, result)
+    except Exception as e:
+        log.error("send_daily_briefing error: %s", e)
+
 
 def check_gmail():
     if not (GMAIL_USER and GMAIL_PASS): return
