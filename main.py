@@ -456,7 +456,10 @@ def send_daily_briefing(phone=None):
     """Build and send morning briefing via WhatsApp."""
     try:
         brief = build_brief()
-        sb_insert("briefings", {"briefing_type": "Daily", "content": brief, "channel": "WhatsApp"})
+        try:
+            sb_insert("briefings", {"briefing_type": "Daily", "content": brief, "channel": "WhatsApp"})
+        except Exception as _be:
+            log.warning("briefing log failed: %s", _be)
         if not phone:
             rows = sb_select("settings", {"key": "eq.whatsapp_number"})
             phone = rows[0].get("value", "") if rows else ""
