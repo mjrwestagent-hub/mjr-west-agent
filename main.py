@@ -460,14 +460,14 @@ def send_daily_briefing(phone=None):
             sb_insert("briefings", {"briefing_type": "Daily", "content": brief, "channel": "WhatsApp"})
         except Exception as _be:
             log.warning("briefing log failed: %s", _be)
-        if not phone:
+        # Send via Telegram (primary) then WhatsApp fallback
+        tg_result = send_telegram(brief)
+        log.info("Daily briefing via Telegram: %s", tg_result)
+        if not tg_result:
+            phone = phone or TELEGRAM_CHAT_ID
             rows = sb_select("settings", {"key": "eq.whatsapp_number"})
-            phone = rows[0].get("value", "") if rows else ""
-        if not phone:
-            log.error("send_daily_briefing: no phone number configured")
-            return
-        result = send_whatsapp(phone, brief)
-        log.info("Daily briefing sent to %s: %s", phone, result)
+            phone = rows[0].get("value","") if rows else ""
+            send_whatsapp(phone, brief)
     except Exception as e:
         log.error("send_daily_briefing error: %s", e)
 
