@@ -1233,31 +1233,25 @@ def api_telegram_test():
 def api_send_briefing():
     auth = request.headers.get("Authorization","")
     if auth != f"Bearer {os.environ.get('ADMIN_PASSWORD','')}": return jsonify({"error":"unauthorized"}), 401
-    data = request.get_json() or {}
-    phone = data.get("phone") or sb_select("settings", {"key": "eq.whatsapp_number"})
-    if isinstance(phone, list): phone = phone[0].get("value","") if phone else ""
-    if not phone: return jsonify({"error":"no phone"}), 400
-    # Run synchronously so we can catch errors
+    token = os.environ.get("TELEGRAM_TOKEN","")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID","")
+    if not token or not chat_id:
+        return jsonify({"error":"missing telegram vars","token_set":bool(token),"chat_id_set":bool(chat_id)})
     try:
         brief = build_brief()
-        sb_insert("briefings",{"briefing_type":"Daily","content":brief,"channel":"WhatsApp"})
-        import urllib.request as _ur2, urllib.parse as _up2, base64 as _b64
-        sid = os.environ.get("TWILIO_ACCOUNT_SID","")
-        token2 = os.environ.get("TWILIO_AUTH_TOKEN","")
-        from_wa = os.environ.get("TWILIO_WHATSAPP_FROM","whatsapp:+14155238886")
-        payload2 = _up2.urlencode({"From": from_wa, "To": f"whatsapp:{phone}", "Body": brief[:1500]}).encode()
-        creds2 = _b64.b64encode(f"{sid}:{token2}".encode()).decode()
-        req2 = _ur2.Request(
-            f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
-            data=payload2,
-            headers={"Authorization": f"Basic {creds2}", "Content-Type": "application/x-www-form-urlencoded"},
-            method="POST"
-        )
-        with _ur2.urlopen(req2) as resp2:
-            twilio_result = json.loads(resp2.read())
-        return jsonify({"success": True, "phone": phone, "twilio_status": twilio_result.get("status"), "twilio_sid": twilio_result.get("sid")})
+        import urllib.request as _ur3
+        payload3 = json.dumps({"chat_id":int(chat_id),"text":brief,"parse_mode":"Markdown"}).encode()
+        req3 = _ur3.Request(f"https://api.telegram.org/bot{token}/sendMessage",
+            data=payload3, headers={"Content-Type":"application/json"}, method="POST")
+        with _ur3.urlopen(req3) as resp3:
+            result3 = json.loads(resp3.read())
+        msg_id = result3.get("result",{}).get("message_id")
+        try: sb_insert("briefings",{"briefing_type":"Daily","content":brief,"channel":"Telegram"})
+        except: pass
+        return jsonify({"success":True,"msg_id":msg_id,"brief_len":len(brief)})
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        return jsonify({"success":False,"error":str(e)})
+
 
 @app.route("/api/push", methods=["POST"])
 def api_push():
