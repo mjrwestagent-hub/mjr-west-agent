@@ -1207,6 +1207,28 @@ def api_whatsapp_test():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
+
+@app.route("/api/telegram/test", methods=["POST"])
+def api_telegram_test():
+    auth = request.headers.get("Authorization","")
+    if auth != f"Bearer {os.environ.get('ADMIN_PASSWORD','')}": return jsonify({"error":"unauthorized"}), 401
+    data = request.get_json() or {}
+    msg = data.get("message", "Test from Turkish the Agent 🏭")
+    token = os.environ.get("TELEGRAM_TOKEN","")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID","")
+    if not token or not chat_id:
+        return jsonify({"error": "missing vars", "token_set": bool(token), "chat_id_set": bool(chat_id)})
+    try:
+        import urllib.request as _ur
+        payload = json.dumps({"chat_id": int(chat_id), "text": msg, "parse_mode": "Markdown"}).encode()
+        req = _ur.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=payload,
+            headers={"Content-Type":"application/json"}, method="POST")
+        with _ur.urlopen(req) as resp:
+            result = json.loads(resp.read())
+        return jsonify({"ok": True, "msg_id": result.get("result",{}).get("message_id")})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
 @app.route("/api/briefing/send", methods=["POST"])
 def api_send_briefing():
     auth = request.headers.get("Authorization","")
