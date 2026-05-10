@@ -19,7 +19,7 @@ from functools import wraps
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-# ── Config ───────────────────────────────────────────────────────────────────
+# ââ Config âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 SUPABASE_URL   = os.getenv("SUPABASE_URL","").rstrip("/")
 SUPABASE_KEY   = os.getenv("SUPABASE_KEY","")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY","")
@@ -48,13 +48,13 @@ ALLOWED_EXT = {"pdf","xlsx","xls","docx","doc","txt","csv","png","jpg","jpeg","e
 def allowed_file(fn):
     return "." in fn and fn.rsplit(".",1)[-1].lower() in ALLOWED_EXT
 
-# ── Flask ─────────────────────────────────────────────────────────────────────
+# ââ Flask âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
-# ── Supabase direct HTTP ──────────────────────────────────────────────────────
-# No supabase-py library — direct REST API calls with service_role key.
+# ââ Supabase direct HTTP ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# No supabase-py library â direct REST API calls with service_role key.
 # This bypasses ALL RLS and version compatibility issues permanently.
 
 SB_HDR = {
@@ -76,7 +76,7 @@ def sb_select(table, filters=None, order="created_at", limit=200):
 
 
 # Core indexed columns per table. AI extractions are split:
-# known fields → indexed columns, everything else → data{} JSONB.
+# known fields â indexed columns, everything else â data{} JSONB.
 # This means any document type works without schema changes.
 CORE_COLS = {
     "properties":   {"address","suburb","property_type","size_sqm","asking_rent_pa","status","landlord","source"},
@@ -96,7 +96,7 @@ CORE_COLS = {
 
 def sb_insert(table, data):
     """Smart insert: known columns go to indexed fields, extras go to data{} JSONB.
-    AI can return any fields — this handles it gracefully, forever."""
+    AI can return any fields â this handles it gracefully, forever."""
     try:
         core = CORE_COLS.get(table, set())
         if core:
@@ -132,11 +132,11 @@ def sb_delete(table, row_id):
     except Exception as e:
         log.error("sb_delete %s: %s", table, e); return False
 
-# ── Schema ────────────────────────────────────────────────────────────────────
+# ââ Schema ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def init_schema():
     """Create tables with JSONB data column for flexible AI extractions.
     Core indexed fields for querying, data{} for everything else.
-    Schema never needs changing — new document types work automatically."""
+    Schema never needs changing â new document types work automatically."""
     sqls = [
         """create table if not exists properties (
             id bigserial primary key, address text, suburb text default 'West Melbourne',
@@ -213,7 +213,7 @@ def init_schema():
 
 
 def gpt(system, user, max_tokens=2000):
-    """Direct HTTP to OpenAI — no library needed."""
+    """Direct HTTP to OpenAI â no library needed."""
     if not OPENAI_API_KEY:
         return "{}"
     try:
@@ -243,7 +243,7 @@ def embed(text):
     except Exception as e:
         log.error("embed: %s", e); return []
 
-# ── File extraction ───────────────────────────────────────────────────────────
+# ââ File extraction âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def extract_text(filepath, filename):
     ext = filename.rsplit(".",1)[-1].lower() if "." in filename else ""
     text, is_img = "", False
@@ -351,12 +351,12 @@ def process_document(filepath, filename):
             md.setdefault("suburb","West Melbourne")
             if sb_insert("market_data", md): counts["market_data"]+=1
 
-        log.info("AI intake: %s → %s (%.2f) %s", filename, a.get("classification"), a.get("confidence",0), counts)
+        log.info("AI intake: %s â %s (%.2f) %s", filename, a.get("classification"), a.get("confidence",0), counts)
         return counts
     except Exception as e:
         log.error("process_document %s: %s", filename, e); return counts
 
-# ── WhatsApp ──────────────────────────────────────────────────────────────────
+# ââ WhatsApp ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def send_whatsapp(to, body):
     """Send WhatsApp message via Twilio REST API (no library)."""
     if not (TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM): 
@@ -389,7 +389,7 @@ def broadcast_whatsapp(body):
         n=n.strip()
         if n: send_whatsapp(n, body)
 
-# ── Briefing ──────────────────────────────────────────────────────────────────
+# ââ Briefing ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def build_brief():
     try:
         from datetime import timezone, timedelta
@@ -416,23 +416,23 @@ def build_brief():
         total_rent = sum(sf(v.get('asking_rent_pa')) for v in avail_vacs)
         comm = total_rent * 0.10
         lines = [
-            f'*MJR West — {aest.strftime("%a %d %b %I:%M%p")}*',
+            f'*MJR West â {aest.strftime("%a %d %b %I:%M%p")}*',
             '',
             '*Pipeline*',
-            f'• {len(avail_vacs)} vacancies (${total_rent/1000000:.1f}M pa total)',
-            f'• {len(active_reqs)} requirements | {len(deals)} deals',
-            f'• Commission pipeline ~${comm/1000:.0f}k',
+            f'â¢ {len(avail_vacs)} vacancies (${total_rent/1000000:.1f}M pa total)',
+            f'â¢ {len(active_reqs)} requirements | {len(deals)} deals',
+            f'â¢ Commission pipeline ~${comm/1000:.0f}k',
         ]
         if avail_vacs:
             lines += ['', '*Top Vacancies*']
             for v in sorted(avail_vacs, key=lambda x: float(x.get('size_sqm') or 0), reverse=True)[:4]:
-                lines.append(f"• {v.get('address','?')} — {fmt_sqm(v.get('size_sqm'))}sqm — {fmt_rent(v.get('asking_rent_pa'))}")
+                lines.append(f"â¢ {v.get('address','?')} â {fmt_sqm(v.get('size_sqm'))}sqm â {fmt_rent(v.get('asking_rent_pa'))}")
         if active_reqs:
             lines += ['', '*Requirements*']
             for r in active_reqs[:4]:
                 co = r.get('company') or dget(r,'company','company_name') or '?'
                 sz = r.get('size_min') or dget(r,'size_min','ideal_gla_size') or '?'
-                lines.append(f'• {co} — {fmt_sqm(sz)}sqm')
+                lines.append(f'â¢ {co} â {fmt_sqm(sz)}sqm')
         matches = []
         for v in avail_vacs[:10]:
             vsz = float(v.get('size_sqm') or 0)
@@ -440,46 +440,40 @@ def build_brief():
             for r in active_reqs[:30]:
                 rsz = float(r.get('size_min') or dget(r,'size_min','ideal_gla_size') or 0)
                 if rsz > 0 and rsz*0.7 <= vsz <= rsz*1.5:
-                    matches.append(f"• {v.get('address','?')} ↔ {r.get('company','?')} ({fmt_sqm(vsz)}sqm)")
+                    matches.append(f"â¢ {v.get('address','?')} â {r.get('company','?')} ({fmt_sqm(vsz)}sqm)")
                     break
             if len(matches) >= 3: break
         if matches:
             lines += ['', '*Potential Matches*']
             lines.extend(matches)
-        lines += ['', 'Have a great day! 💪']
+        lines += ['', 'Have a great day! ðª']
         return '\n'.join(lines)
     except Exception as e:
         log.error('build_brief error: %s', e)
         return f'MJR West Daily Brief\n\nError: {e}\n\ntturkishtheagent.com'
 
 def send_daily_briefing(phone=None):
-    """Build and send morning briefing via Telegram."""
-    log.info("BRIEFING: starting send_daily_briefing")
+    token = os.environ.get("TELEGRAM_TOKEN","")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID","")
     try:
-        log.info("BRIEFING: calling build_brief")
         brief = build_brief()
-        log.info("BRIEFING: brief built, len=%d", len(brief))
     except Exception as e:
-        log.error("BRIEFING: build_brief failed: %s", e)
-        brief = f"MJR West Daily Brief\n\nError building brief: {e}"
+        brief = f"MJR West Brief - Error: {e}"
+    try: sb_insert("briefings",{"briefing_type":"Daily","content":brief,"channel":"Telegram"})
+    except: pass
+    if not token or not chat_id:
+        log.error("send_daily_briefing: TELEGRAM_TOKEN=%s TELEGRAM_CHAT_ID=%s", bool(token), bool(chat_id))
+        return
     try:
-        sb_insert("briefings", {"briefing_type": "Daily", "content": brief, "channel": "Telegram"})
-    except Exception as _be:
-        log.warning("BRIEFING: log to DB failed: %s", _be)
-    log.info("BRIEFING: calling send_telegram")
-    token = os.environ.get("TELEGRAM_TOKEN", "")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
-    log.info("BRIEFING: token_set=%s chat_id_set=%s", bool(token), bool(chat_id))
-    try:
-        import urllib.request as _ur2
-        payload2 = json.dumps({"chat_id": int(chat_id), "text": brief, "parse_mode": "Markdown"}).encode()
-        req2 = _ur2.Request(f"https://api.telegram.org/bot{token}/sendMessage",
-            data=payload2, headers={"Content-Type":"application/json"}, method="POST")
-        with _ur2.urlopen(req2) as resp2:
-            result2 = json.loads(resp2.read())
-        log.info("BRIEFING: Telegram sent ok msg_id=%s", result2.get("result",{}).get("message_id"))
-    except Exception as e2:
-        log.error("BRIEFING: Telegram send failed: %s", e2)
+        import urllib.request as _ur4
+        payload4 = json.dumps({"chat_id":int(chat_id),"text":brief,"parse_mode":"Markdown"}).encode()
+        req4 = _ur4.Request(f"https://api.telegram.org/bot{token}/sendMessage",
+            data=payload4,headers={"Content-Type":"application/json"},method="POST")
+        with _ur4.urlopen(req4) as resp4:
+            r4 = json.loads(resp4.read())
+        log.info("Briefing sent via Telegram: msg_id=%s", r4.get("result",{}).get("message_id"))
+    except Exception as e:
+        log.error("Briefing Telegram send failed: %s", e)
 
 
 def check_gmail():
@@ -512,7 +506,7 @@ scheduler.add_job(send_daily_briefing, CronTrigger(hour=BRIEFING_HOUR,minute=BRI
 scheduler.add_job(check_gmail, CronTrigger(minute="*/15"), id="gmail")
 scheduler.start()
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
+# ââ Auth ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def login_required(f):
     @wraps(f)
     def wrapper(*args,**kwargs):
@@ -520,7 +514,7 @@ def login_required(f):
         return f(*args,**kwargs)
     return wrapper
 
-# ── Layout ────────────────────────────────────────────────────────────────────
+# ââ Layout ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 NAV = [
     ("dashboard","bi-speedometer2","Dashboard"),
     ("properties","bi-buildings","Properties"),
@@ -570,7 +564,7 @@ def layout(content, title="MJR West", active=""):
     return render_template_string(f"""<!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title} — MJR West Agent</title>
+<title>{title} â MJR West Agent</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 <style>{STYLE}</style></head>
@@ -619,20 +613,20 @@ def dget(row, *keys):
     return None
 
 def fc(v):
-    try: return f"${float(v):,.0f}" if v else "—"
-    except: return "—"
+    try: return f"${float(v):,.0f}" if v else "â"
+    except: return "â"
 
 def fd(s):
-    try: return datetime.fromisoformat(str(s)).strftime("%d %b %Y") if s else "—"
-    except: return str(s) if s else "—"
+    try: return datetime.fromisoformat(str(s)).strftime("%d %b %Y") if s else "â"
+    except: return str(s) if s else "â"
 
 def sbadge(status):
     c={"Available":"success","Completed":"primary","Negotiation":"warning","Active":"info","New":"warning"}.get(status,"secondary")
-    return f'<span class="badge bg-{c} bg-opacity-25 text-{c}">{status or "—"}</span>'
+    return f'<span class="badge bg-{c} bg-opacity-25 text-{c}">{status or "â"}</span>'
 
-# ── Routes ────────────────────────────────────────────────────────────────────
+# ââ Routes ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-# ── Gmail OAuth2 ─────────────────────────────────────────────────────────────
+# ââ Gmail OAuth2 âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 @app.route("/auth/google")
 def auth_google():
     import urllib.parse
@@ -708,7 +702,7 @@ QUOTES = [
     ("Success usually comes to those who are too busy to be looking for it.", "Henry David Thoreau"),
     ("It does not matter how slowly you go as long as you do not stop.", "Confucius"),
     ("The real estate market is local, and so is success.", "Unknown"),
-    ("In real estate, location is everything — but relationships are everything else.", "Unknown"),
+    ("In real estate, location is everything â but relationships are everything else.", "Unknown"),
     ("A deal is only as good as the people in it.", "Unknown"),
     ("Every property tells a story. Your job is to match it with the right tenant.", "Unknown"),
     ("The best investment on earth is earth.", "Louis Glickman"),
@@ -722,7 +716,7 @@ def get_quote_of_day():
     import hashlib
     day_hash = int(hashlib.md5(datetime.now().strftime("%Y-%m-%d").encode()).hexdigest(), 16)
     q, author = QUOTES[day_hash % len(QUOTES)]
-    return f'{q} <span style="color:#f59e0b;font-style:normal;font-weight:600;">— {author}</span>'
+    return f'{q} <span style="color:#f59e0b;font-style:normal;font-weight:600;">â {author}</span>'
 
 @app.route("/dashboard")
 @login_required
@@ -795,7 +789,7 @@ def upload():
                     try: os.remove(fp)
                     except: pass
             threading.Thread(target=_bg,args=(fpath,fname),daemon=True).start()
-            flash(f"⏳ {fname} received — processing in background. Check Documents shortly.","success")
+            flash(f"â³ {fname} received â processing in background. Check Documents shortly.","success")
 
     content = """
 <h2 class="fw-bold mb-4">AI Document Intake</h2>
@@ -843,7 +837,7 @@ def documents():
       <td><span class="badge bg-{'success' if d.get('processing_status')=='complete' else 'warning'}">{d.get('processing_status','?')}</span></td>
       <td class="text-muted small">{(d.get('ai_summary') or '')[:80]}</td>
       <td>{fd(d.get('created_at'))}</td>
-    </tr>""" for d in docs) or "<tr><td colspan=6 class='text-muted p-4 text-center'>No documents yet. <a href='/upload'>Upload your first file →</a></td></tr>"
+    </tr>""" for d in docs) or "<tr><td colspan=6 class='text-muted p-4 text-center'>No documents yet. <a href='/upload'>Upload your first file â</a></td></tr>"
 
     content = f"""
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -1094,7 +1088,7 @@ def whatsapp_page():
         msg = request.form.get("message","").strip()
         if to and msg:
             ok = send_whatsapp(to,msg)
-            flash("Message sent" if ok else "Failed — check Twilio config","success" if ok else "error")
+            flash("Message sent" if ok else "Failed â check Twilio config","success" if ok else "error")
     content = """<h2 class="fw-bold mb-4">WhatsApp</h2>
 <div class="col-md-6"><div class="card"><div class="card-header fw-semibold">Send Message</div>
 <div class="card-body"><form method="POST">
@@ -1107,7 +1101,7 @@ def whatsapp_page():
 @app.route("/settings")
 @login_required
 def settings_page():
-    def dot(ok): return f'<span class="badge bg-{"success" if ok else "danger"}">{"✓ Connected" if ok else "✗ Not Set"}</span>'
+    def dot(ok): return f'<span class="badge bg-{"success" if ok else "danger"}">{"â Connected" if ok else "â Not Set"}</span>'
     content = f"""<h2 class="fw-bold mb-4">Settings</h2>
 <div class="row g-3">
 <div class="col-md-6"><div class="card"><div class="card-header fw-semibold">Integration Status</div>
@@ -1119,7 +1113,7 @@ def settings_page():
 </table></div></div></div>
 <div class="col-md-6"><div class="card"><div class="card-header fw-semibold">Configuration</div>
 <div class="card-body"><table class="table table-sm mb-0">
-<tr><td>Version</td><td>V2.0 — Clean Build</td></tr>
+<tr><td>Version</td><td>V2.0 â Clean Build</td></tr>
 <tr><td>Timezone</td><td>{TIMEZONE}</td></tr>
 <tr><td>Briefing</td><td>{BRIEFING_HOUR:02d}:{BRIEFING_MIN:02d}</td></tr>
 <tr><td>OpenAI Model</td><td>{OPENAI_MODEL}</td></tr>
@@ -1193,7 +1187,7 @@ def api_whatsapp_test():
     if auth != f"Bearer {os.environ.get('ADMIN_PASSWORD','')}": return jsonify({"error":"unauthorized"}), 401
     data = request.get_json() or {}
     phone = data.get("phone", "+61437088422")
-    msg = data.get("message", "Test from Turkish the Agent 🏭")
+    msg = data.get("message", "Test from Turkish the Agent ð­")
     try:
         import urllib.request as _ur, urllib.parse as _up, base64 as _b64
         sid = os.environ.get("TWILIO_ACCOUNT_SID","")
@@ -1223,7 +1217,7 @@ def api_telegram_test():
     auth = request.headers.get("Authorization","")
     if auth != f"Bearer {os.environ.get('ADMIN_PASSWORD','')}": return jsonify({"error":"unauthorized"}), 401
     data = request.get_json() or {}
-    msg = data.get("message", "Test from Turkish the Agent 🏭")
+    msg = data.get("message", "Test from Turkish the Agent ð­")
     token = os.environ.get("TELEGRAM_TOKEN","")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID","")
     if not token or not chat_id:
@@ -1243,31 +1237,25 @@ def api_telegram_test():
 def api_send_briefing():
     auth = request.headers.get("Authorization","")
     if auth != f"Bearer {os.environ.get('ADMIN_PASSWORD','')}": return jsonify({"error":"unauthorized"}), 401
-    data = request.get_json() or {}
-    phone = data.get("phone") or sb_select("settings", {"key": "eq.whatsapp_number"})
-    if isinstance(phone, list): phone = phone[0].get("value","") if phone else ""
-    if not phone: return jsonify({"error":"no phone"}), 400
-    # Run synchronously so we can catch errors
+    token = os.environ.get("TELEGRAM_TOKEN","")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID","")
+    if not token or not chat_id:
+        return jsonify({"error":"missing telegram vars","token":bool(token),"chat_id":bool(chat_id)})
     try:
         brief = build_brief()
-        sb_insert("briefings",{"briefing_type":"Daily","content":brief,"channel":"WhatsApp"})
-        import urllib.request as _ur2, urllib.parse as _up2, base64 as _b64
-        sid = os.environ.get("TWILIO_ACCOUNT_SID","")
-        token2 = os.environ.get("TWILIO_AUTH_TOKEN","")
-        from_wa = os.environ.get("TWILIO_WHATSAPP_FROM","whatsapp:+14155238886")
-        payload2 = _up2.urlencode({"From": from_wa, "To": f"whatsapp:{phone}", "Body": brief[:1500]}).encode()
-        creds2 = _b64.b64encode(f"{sid}:{token2}".encode()).decode()
-        req2 = _ur2.Request(
-            f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
-            data=payload2,
-            headers={"Authorization": f"Basic {creds2}", "Content-Type": "application/x-www-form-urlencoded"},
-            method="POST"
-        )
-        with _ur2.urlopen(req2) as resp2:
-            twilio_result = json.loads(resp2.read())
-        return jsonify({"success": True, "phone": phone, "twilio_status": twilio_result.get("status"), "twilio_sid": twilio_result.get("sid")})
+        import urllib.request as _ur3
+        payload3 = json.dumps({"chat_id":int(chat_id),"text":brief,"parse_mode":"Markdown"}).encode()
+        req3 = _ur3.Request(f"https://api.telegram.org/bot{token}/sendMessage",
+            data=payload3,headers={"Content-Type":"application/json"},method="POST")
+        with _ur3.urlopen(req3) as resp3:
+            result3 = json.loads(resp3.read())
+        msg_id = result3.get("result",{}).get("message_id")
+        try: sb_insert("briefings",{"briefing_type":"Daily","content":brief,"channel":"Telegram"})
+        except: pass
+        return jsonify({"success":True,"msg_id":msg_id,"brief_len":len(brief)})
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        return jsonify({"success":False,"error":str(e)})
+
 
 @app.route("/api/push", methods=["POST"])
 def api_push():
