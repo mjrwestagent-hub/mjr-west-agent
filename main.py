@@ -453,23 +453,33 @@ def build_brief():
         return f'MJR West Daily Brief\n\nError: {e}\n\ntturkishtheagent.com'
 
 def send_daily_briefing(phone=None):
-    """Build and send morning briefing via WhatsApp."""
+    """Build and send morning briefing via Telegram."""
+    log.info("BRIEFING: starting send_daily_briefing")
     try:
+        log.info("BRIEFING: calling build_brief")
         brief = build_brief()
-        try:
-            sb_insert("briefings", {"briefing_type": "Daily", "content": brief, "channel": "WhatsApp"})
-        except Exception as _be:
-            log.warning("briefing log failed: %s", _be)
-        # Send via Telegram (primary) then WhatsApp fallback
-        tg_result = send_telegram(brief)
-        log.info("Daily briefing via Telegram: %s", tg_result)
-        if not tg_result:
-            phone = phone or TELEGRAM_CHAT_ID
-            rows = sb_select("settings", {"key": "eq.whatsapp_number"})
-            phone = rows[0].get("value","") if rows else ""
-            send_whatsapp(phone, brief)
+        log.info("BRIEFING: brief built, len=%d", len(brief))
     except Exception as e:
-        log.error("send_daily_briefing error: %s", e)
+        log.error("BRIEFING: build_brief failed: %s", e)
+        brief = f"MJR West Daily Brief\n\nError building brief: {e}"
+    try:
+        sb_insert("briefings", {"briefing_type": "Daily", "content": brief, "channel": "Telegram"})
+    except Exception as _be:
+        log.warning("BRIEFING: log to DB failed: %s", _be)
+    log.info("BRIEFING: calling send_telegram")
+    token = os.environ.get("TELEGRAM_TOKEN", "")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+    log.info("BRIEFING: token_set=%s chat_id_set=%s", bool(token), bool(chat_id))
+    try:
+        import urllib.request as _ur2
+        payload2 = json.dumps({"chat_id": int(chat_id), "text": brief, "parse_mode": "Markdown"}).encode()
+        req2 = _ur2.Request(f"https://api.telegram.org/bot{token}/sendMessage",
+            data=payload2, headers={"Content-Type":"application/json"}, method="POST")
+        with _ur2.urlopen(req2) as resp2:
+            result2 = json.loads(resp2.read())
+        log.info("BRIEFING: Telegram sent ok msg_id=%s", result2.get("result",{}).get("message_id"))
+    except Exception as e2:
+        log.error("BRIEFING: Telegram send failed: %s", e2)
 
 
 def check_gmail():
