@@ -453,23 +453,30 @@ def build_brief():
         return f'MJR West Daily Brief\n\nError: {e}\n\ntturkishtheagent.com'
 
 def send_daily_briefing(phone=None):
-    """Build and send morning briefing via WhatsApp."""
+    """Send morning briefing via Telegram."""
+    token = os.environ.get("TELEGRAM_TOKEN","")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID","")
     try:
         brief = build_brief()
-        try:
-            sb_insert("briefings", {"briefing_type": "Daily", "content": brief, "channel": "WhatsApp"})
-        except Exception as _be:
-            log.warning("briefing log failed: %s", _be)
-        # Send via Telegram (primary) then WhatsApp fallback
-        tg_result = send_telegram(brief)
-        log.info("Daily briefing via Telegram: %s", tg_result)
-        if not tg_result:
-            phone = phone or TELEGRAM_CHAT_ID
-            rows = sb_select("settings", {"key": "eq.whatsapp_number"})
-            phone = rows[0].get("value","") if rows else ""
-            send_whatsapp(phone, brief)
     except Exception as e:
-        log.error("send_daily_briefing error: %s", e)
+        log.error("build_brief failed: %s", e)
+        brief = f"MJR West Brief - Error building brief: {e}"
+    try:
+        sb_insert("briefings",{"briefing_type":"Daily","content":brief,"channel":"Telegram"})
+    except: pass
+    if not token or not chat_id:
+        log.error("send_daily_briefing: missing TELEGRAM_TOKEN or TELEGRAM_CHAT_ID")
+        return
+    try:
+        import urllib.request as _ur5
+        payload5 = json.dumps({"chat_id":int(chat_id),"text":brief,"parse_mode":"Markdown"}).encode()
+        req5 = _ur5.Request(f"https://api.telegram.org/bot{token}/sendMessage",
+            data=payload5, headers={"Content-Type":"application/json"}, method="POST")
+        with _ur5.urlopen(req5) as resp5:
+            r5 = json.loads(resp5.read())
+        log.info("Daily briefing sent via Telegram: msg_id=%s", r5.get("result",{}).get("message_id"))
+    except Exception as e:
+        log.error("Telegram briefing send failed: %s", e)
 
 
 def check_gmail():
